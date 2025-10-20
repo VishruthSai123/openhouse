@@ -12,6 +12,7 @@ import {
 
 import manjunathImage from "@/assets/manjunath.png";
 import vishruthImage from "@/assets/vishruth.jpg";
+import vinushaImage from "@/assets/pfp.jpeg";
 
 const Masterminds = () => {
   const { ref, isVisible } = useScrollReveal();
@@ -42,10 +43,10 @@ const Masterminds = () => {
       image: vishruthImage
     },
     {
-      name: "Team Member",
-      role: "CTO",
-      subtitle: "Innovative technology leader driving cutting-edge solutions and engineering excellence",
-      image: manjunathImage // Using duplicate image for now
+      name: "Ragala Vinusha",
+      role: "CMO",
+      subtitle: "Expert in product and marketing strategy, driving brand growth and market expansion",
+      image: vinushaImage
     }
   ];
 
