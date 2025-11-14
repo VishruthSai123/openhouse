@@ -71,14 +71,14 @@ const Projects = () => {
         .from('projects')
         .select(`
           *,
-          profiles:creator_id(full_name, avatar_url, role),
+          profiles!projects_creator_id_fkey(full_name, avatar_url, role),
           project_members(id)
         `)
         .eq('visibility', 'public')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProjects(data || []);
+      setProjects(data as any || []);
     } catch (error) {
       console.error('Error loading projects:', error);
       toast({

@@ -48,11 +48,20 @@ CREATE TABLE IF NOT EXISTS connections (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   sender_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   receiver_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'rejected')),
+  status TEXT DEFAULT 'pending',
   message TEXT,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Fix any invalid status values
+UPDATE connections SET status = 'pending' 
+WHERE status NOT IN ('pending', 'accepted', 'rejected') OR status IS NULL;
+
+-- Add constraint after cleaning data
+ALTER TABLE connections DROP CONSTRAINT IF EXISTS connections_status_check;
+ALTER TABLE connections ADD CONSTRAINT connections_status_check 
+  CHECK (status IN ('pending', 'accepted', 'rejected'));
 
 CREATE INDEX IF NOT EXISTS idx_connections_sender ON connections(sender_id);
 CREATE INDEX IF NOT EXISTS idx_connections_receiver ON connections(receiver_id);
@@ -65,14 +74,32 @@ CREATE TABLE IF NOT EXISTS projects (
   title TEXT NOT NULL,
   description TEXT NOT NULL,
   category TEXT NOT NULL,
-  status TEXT DEFAULT 'planning' CHECK (status IN ('planning', 'in_progress', 'completed', 'on_hold')),
-  visibility TEXT DEFAULT 'public' CHECK (visibility IN ('public', 'private')),
+  status TEXT DEFAULT 'planning',
+  visibility TEXT DEFAULT 'public',
   github_url TEXT,
   demo_url TEXT,
   tags TEXT[] DEFAULT '{}',
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Fix any invalid status values in existing data
+UPDATE projects SET status = 'planning' 
+WHERE status NOT IN ('planning', 'in_progress', 'completed', 'on_hold') OR status IS NULL;
+
+-- Fix any invalid visibility values in existing data
+UPDATE projects SET visibility = 'public' 
+WHERE visibility NOT IN ('public', 'private') OR visibility IS NULL;
+
+-- Drop existing constraints if they exist
+ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_status_check;
+ALTER TABLE projects DROP CONSTRAINT IF EXISTS projects_visibility_check;
+
+-- Add constraints after data is cleaned
+ALTER TABLE projects ADD CONSTRAINT projects_status_check 
+  CHECK (status IN ('planning', 'in_progress', 'completed', 'on_hold'));
+ALTER TABLE projects ADD CONSTRAINT projects_visibility_check 
+  CHECK (visibility IN ('public', 'private'));
 
 CREATE INDEX IF NOT EXISTS idx_projects_creator ON projects(creator_id);
 CREATE INDEX IF NOT EXISTS idx_projects_status ON projects(status);
@@ -83,10 +110,19 @@ CREATE TABLE IF NOT EXISTS project_members (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   user_id UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
-  role TEXT DEFAULT 'member' CHECK (role IN ('owner', 'admin', 'member')),
+  role TEXT DEFAULT 'member',
   joined_at TIMESTAMPTZ DEFAULT now(),
   UNIQUE(project_id, user_id)
 );
+
+-- Fix any invalid role values
+UPDATE project_members SET role = 'member' 
+WHERE role NOT IN ('owner', 'admin', 'member') OR role IS NULL;
+
+-- Add constraint after cleaning data
+ALTER TABLE project_members DROP CONSTRAINT IF EXISTS project_members_role_check;
+ALTER TABLE project_members ADD CONSTRAINT project_members_role_check 
+  CHECK (role IN ('owner', 'admin', 'member'));
 
 CREATE INDEX IF NOT EXISTS idx_project_members_project ON project_members(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_members_user ON project_members(user_id);
@@ -97,12 +133,21 @@ CREATE TABLE IF NOT EXISTS project_tasks (
   project_id UUID NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
   title TEXT NOT NULL,
   description TEXT,
-  status TEXT DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'done')),
+  status TEXT DEFAULT 'todo',
   assigned_to UUID REFERENCES profiles(id) ON DELETE SET NULL,
   created_by UUID NOT NULL REFERENCES profiles(id) ON DELETE CASCADE,
   created_at TIMESTAMPTZ DEFAULT now(),
   updated_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Fix any invalid status values
+UPDATE project_tasks SET status = 'todo' 
+WHERE status NOT IN ('todo', 'in_progress', 'done') OR status IS NULL;
+
+-- Add constraint after cleaning data
+ALTER TABLE project_tasks DROP CONSTRAINT IF EXISTS project_tasks_status_check;
+ALTER TABLE project_tasks ADD CONSTRAINT project_tasks_status_check 
+  CHECK (status IN ('todo', 'in_progress', 'done'));
 
 CREATE INDEX IF NOT EXISTS idx_project_tasks_project ON project_tasks(project_id);
 CREATE INDEX IF NOT EXISTS idx_project_tasks_assigned ON project_tasks(assigned_to);
@@ -130,11 +175,20 @@ CREATE TABLE IF NOT EXISTS mentorship_sessions (
   description TEXT,
   scheduled_at TIMESTAMPTZ,
   duration_minutes INTEGER DEFAULT 60,
-  status TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'pending',
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Fix any invalid status values
+UPDATE mentorship_sessions SET status = 'pending' 
+WHERE status NOT IN ('pending', 'confirmed', 'completed', 'cancelled');
+
+-- Add constraint after cleaning data
+ALTER TABLE mentorship_sessions DROP CONSTRAINT IF EXISTS mentorship_sessions_status_check;
+ALTER TABLE mentorship_sessions ADD CONSTRAINT mentorship_sessions_status_check 
+  CHECK (status IN ('pending', 'confirmed', 'completed', 'cancelled'));
 
 CREATE INDEX IF NOT EXISTS idx_mentorship_mentor ON mentorship_sessions(mentor_id);
 CREATE INDEX IF NOT EXISTS idx_mentorship_mentee ON mentorship_sessions(mentee_id);
@@ -152,6 +206,23 @@ CREATE TABLE IF NOT EXISTS achievements (
   coins_reward INTEGER NOT NULL DEFAULT 0,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Add missing columns if they don't exist (for existing tables)
+ALTER TABLE achievements ADD COLUMN IF NOT EXISTS icon TEXT;
+ALTER TABLE achievements ADD COLUMN IF NOT EXISTS category TEXT;
+ALTER TABLE achievements ADD COLUMN IF NOT EXISTS requirement_type TEXT;
+ALTER TABLE achievements ADD COLUMN IF NOT EXISTS requirement_value INTEGER;
+ALTER TABLE achievements ADD COLUMN IF NOT EXISTS coins_reward INTEGER DEFAULT 0;
+
+-- Add unique constraint on name if it doesn't exist
+DO $$ 
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'achievements_name_key'
+  ) THEN
+    ALTER TABLE achievements ADD CONSTRAINT achievements_name_key UNIQUE (name);
+  END IF;
+END $$;
 
 -- Step 12: Create achievement_unlocks table
 CREATE TABLE IF NOT EXISTS achievement_unlocks (

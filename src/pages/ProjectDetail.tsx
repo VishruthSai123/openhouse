@@ -116,30 +116,30 @@ const ProjectDetail = () => {
       // Load project
       const { data: projectData, error: projectError } = await supabase
         .from('projects')
-        .select('*, profiles:creator_id(full_name, avatar_url, role)')
+        .select('*, profiles!projects_creator_id_fkey(full_name, avatar_url, role)')
         .eq('id', id)
         .single();
 
       if (projectError) throw projectError;
-      setProject(projectData);
+      setProject(projectData as any);
       setIsOwner(projectData.creator_id === user.id);
 
       // Load members
       const { data: membersData } = await supabase
         .from('project_members')
-        .select('*, profiles:user_id(full_name, avatar_url, role)')
+        .select('*, profiles!project_members_user_id_fkey(full_name, avatar_url, role)')
         .eq('project_id', id);
 
-      setMembers(membersData || []);
+      setMembers(membersData as any || []);
 
       // Load tasks
       const { data: tasksData } = await supabase
         .from('project_tasks')
-        .select('*, profiles:assigned_to(full_name, avatar_url)')
+        .select('*, profiles!project_tasks_assigned_to_fkey(full_name, avatar_url)')
         .eq('project_id', id)
         .order('created_at', { ascending: false });
 
-      setTasks(tasksData || []);
+      setTasks(tasksData as any || []);
 
       // Load milestones
       const { data: milestonesData } = await supabase
