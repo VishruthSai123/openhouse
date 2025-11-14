@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import MessagesButton from "./MessagesButton";
 
 const Header = () => {
   const navigate = useNavigate();
@@ -24,12 +25,15 @@ const Header = () => {
       <div className="max-w-7xl mx-auto px-4 py-4 flex items-center justify-between">
         <h1 className="text-xl md:text-2xl font-bold text-primary">Open House</h1>
         
-        <Button 
-          variant="outline" 
-          onClick={() => navigate(isAuthenticated ? "/home" : "/auth")}
-        >
-          {isAuthenticated ? "Dashboard" : "Sign In"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {isAuthenticated && <MessagesButton />}
+          <Button 
+            variant="outline" 
+            onClick={() => navigate(isAuthenticated ? "/home" : "/auth")}
+          >
+            {isAuthenticated ? "Dashboard" : "Sign In"}
+          </Button>
+        </div>
       </div>
     </header>
   );

@@ -104,56 +104,56 @@ const Leaderboard = () => {
   const renderLeaderboard = (leaders: LeaderboardEntry[], type: 'coins' | 'ideas' | 'projects') => {
     if (loading) {
       return (
-        <div className="text-center py-12">
-          <div className="animate-pulse text-muted-foreground">Loading...</div>
+        <div className="text-center py-8 sm:py-12">
+          <div className="animate-pulse text-muted-foreground text-sm">Loading...</div>
         </div>
       );
     }
 
     if (leaders.length === 0) {
       return (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">No data yet</p>
+        <div className="text-center py-8 sm:py-12">
+          <p className="text-muted-foreground text-sm">No data yet</p>
         </div>
       );
     }
 
     return (
-      <div className="space-y-3">
+      <div className="space-y-2 sm:space-y-3">
         {leaders.map((leader, index) => (
           <Card key={leader.id} className={index < 3 ? 'border-primary/50' : ''}>
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className="flex items-center justify-center w-10">
+            <CardContent className="p-3 sm:p-4 flex items-center gap-2 sm:gap-4">
+              <div className="flex items-center justify-center w-8 sm:w-10 flex-shrink-0">
                 {getRankIcon(index)}
               </div>
-              <Avatar className="w-10 h-10">
-                <AvatarFallback>
+              <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                <AvatarFallback className="text-xs sm:text-sm">
                   {leader.full_name?.charAt(0).toUpperCase() || 'A'}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex-1">
-                <p className="font-medium">{leader.full_name || 'Anonymous'}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-sm sm:text-base truncate">{leader.full_name || 'Anonymous'}</p>
                 {leader.role && (
-                  <p className="text-sm text-muted-foreground capitalize">{leader.role}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground capitalize truncate">{leader.role}</p>
                 )}
               </div>
-              <div className="text-right">
+              <div className="text-right flex-shrink-0">
                 {type === 'coins' && (
-                  <div className="flex items-center gap-2">
-                    <Coins className="w-4 h-4 text-yellow-500" />
-                    <span className="font-bold text-lg">{leader.builder_coins || 0}</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />
+                    <span className="font-bold text-base sm:text-lg">{leader.builder_coins || 0}</span>
                   </div>
                 )}
                 {type === 'ideas' && (
-                  <div className="flex items-center gap-2">
-                    <Lightbulb className="w-4 h-4 text-primary" />
-                    <span className="font-bold text-lg">{leader.ideas_count || 0}</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <Lightbulb className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
+                    <span className="font-bold text-base sm:text-lg">{leader.ideas_count || 0}</span>
                   </div>
                 )}
                 {type === 'projects' && (
-                  <div className="flex items-center gap-2">
-                    <Briefcase className="w-4 h-4 text-green-500" />
-                    <span className="font-bold text-lg">{leader.projects_count || 0}</span>
+                  <div className="flex items-center gap-1 sm:gap-2">
+                    <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-green-500" />
+                    <span className="font-bold text-base sm:text-lg">{leader.projects_count || 0}</span>
                   </div>
                 )}
               </div>
@@ -168,43 +168,45 @@ const Leaderboard = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center gap-4 px-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="w-5 h-5" />
+        <div className="container flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4">
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <Trophy className="w-6 h-6 text-primary" />
-            <h1 className="text-xl font-bold">Leaderboards</h1>
+            <Trophy className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+            <h1 className="text-base sm:text-xl font-bold">Leaderboards</h1>
           </div>
         </div>
       </header>
 
-      <main className="container px-4 py-8 max-w-4xl mx-auto">
-        <Tabs defaultValue="coins" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="coins" className="gap-2">
-              <Coins className="w-4 h-4" />
-              Builder Coins
+      <main className="container px-3 sm:px-4 py-4 sm:py-8 max-w-4xl mx-auto">
+        <Tabs defaultValue="coins" className="space-y-4 sm:space-y-6">
+          <TabsList className="grid w-full grid-cols-3 h-auto">
+            <TabsTrigger value="coins" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Coins className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Builder Coins</span>
+              <span className="sm:hidden">Coins</span>
             </TabsTrigger>
-            <TabsTrigger value="ideas" className="gap-2">
-              <Lightbulb className="w-4 h-4" />
-              Ideas
+            <TabsTrigger value="ideas" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Lightbulb className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span>Ideas</span>
             </TabsTrigger>
-            <TabsTrigger value="projects" className="gap-2">
-              <Briefcase className="w-4 h-4" />
-              Projects
+            <TabsTrigger value="projects" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Projects</span>
+              <span className="sm:hidden">Build</span>
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="coins">
             <Card>
-              <CardHeader>
-                <CardTitle>Top Builders by Coins</CardTitle>
-                <CardDescription>
+              <CardHeader className="px-3 sm:px-6">
+                <CardTitle className="text-base sm:text-xl">Top Builders by Coins</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   Earn coins by contributing to the community
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 sm:px-6">
                 {renderLeaderboard(coinsLeaders, 'coins')}
               </CardContent>
             </Card>
@@ -212,13 +214,13 @@ const Leaderboard = () => {
 
           <TabsContent value="ideas">
             <Card>
-              <CardHeader>
-                <CardTitle>Top Idea Creators</CardTitle>
-                <CardDescription>
+              <CardHeader className="px-3 sm:px-6">
+                <CardTitle className="text-base sm:text-xl">Top Idea Creators</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   Most startup ideas shared
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 sm:px-6">
                 {renderLeaderboard(ideasLeaders, 'ideas')}
               </CardContent>
             </Card>
@@ -226,13 +228,13 @@ const Leaderboard = () => {
 
           <TabsContent value="projects">
             <Card>
-              <CardHeader>
-                <CardTitle>Top Project Creators</CardTitle>
-                <CardDescription>
+              <CardHeader className="px-3 sm:px-6">
+                <CardTitle className="text-base sm:text-xl">Top Project Creators</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
                   Most projects created
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 sm:px-6">
                 {renderLeaderboard(projectsLeaders, 'projects')}
               </CardContent>
             </Card>

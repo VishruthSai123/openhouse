@@ -218,68 +218,68 @@ const Mentorship = () => {
   return (
     <div className="min-h-screen bg-background">
       <header className="border-b">
-        <div className="container flex items-center justify-between px-4 py-4 max-w-7xl mx-auto">
-          <div className="flex items-center gap-4">
-            <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+        <div className="container flex items-center justify-between px-3 sm:px-4 py-3 sm:py-4 max-w-7xl mx-auto">
+          <div className="flex items-center gap-2 sm:gap-4">
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={() => navigate('/dashboard')}>
               <ArrowLeft className="w-4 h-4" />
             </Button>
             <div>
-              <h1 className="text-2xl font-bold">Mentorship</h1>
-              <p className="text-sm text-muted-foreground">Connect with experienced mentors</p>
+              <h1 className="text-lg sm:text-2xl font-bold">Mentorship</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">Connect with experienced mentors</p>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="container px-4 py-8 max-w-7xl mx-auto">
-        <Tabs defaultValue="mentors" className="space-y-6">
-          <TabsList>
-            <TabsTrigger value="mentors">Find Mentors</TabsTrigger>
-            <TabsTrigger value="sessions">My Sessions</TabsTrigger>
+      <main className="container px-3 sm:px-4 py-4 sm:py-8 max-w-7xl mx-auto">
+        <Tabs defaultValue="mentors" className="space-y-4 sm:space-y-6">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="mentors" className="flex-1 sm:flex-none text-xs sm:text-sm">Find Mentors</TabsTrigger>
+            <TabsTrigger value="sessions" className="flex-1 sm:flex-none text-xs sm:text-sm">My Sessions</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="mentors" className="space-y-6">
-            <div className="flex gap-4">
+          <TabsContent value="mentors" className="space-y-4 sm:space-y-6">
+            <div className="flex gap-3 sm:gap-4">
               <Input
                 placeholder="Search mentors by name, skills, or expertise..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-1"
+                className="h-9 sm:h-10 text-sm flex-1"
               />
             </div>
 
             {filteredMentors.length === 0 ? (
               <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <GraduationCap className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>No mentors found</p>
-                  <p className="text-sm">Try adjusting your search criteria</p>
+                <CardContent className="py-8 sm:py-12 text-center text-muted-foreground">
+                  <GraduationCap className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm sm:text-base">No mentors found</p>
+                  <p className="text-xs sm:text-sm">Try adjusting your search criteria</p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                 {filteredMentors.map((mentor) => (
                   <Card key={mentor.id} className="hover:border-primary/50 transition-colors">
-                    <CardHeader>
-                      <div className="flex items-start gap-4">
-                        <Avatar className="w-12 h-12">
-                          <AvatarFallback className="bg-indigo-500/10 text-indigo-500">
+                    <CardHeader className="px-3 sm:px-6 pt-4 sm:pt-6">
+                      <div className="flex items-start gap-3 sm:gap-4">
+                        <Avatar className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+                          <AvatarFallback className="bg-indigo-500/10 text-indigo-500 text-sm sm:text-base">
                             {mentor.full_name?.charAt(0).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <div className="flex-1">
-                          <CardTitle className="text-lg">{mentor.full_name}</CardTitle>
-                          <CardDescription className="mt-1">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg truncate">{mentor.full_name}</CardTitle>
+                          <CardDescription className="mt-1 text-xs sm:text-sm line-clamp-2">
                             {mentor.bio || 'Experienced mentor ready to help'}
                           </CardDescription>
                         </div>
                       </div>
                     </CardHeader>
-                    <CardContent>
+                    <CardContent className="px-3 sm:px-6">
                       {mentor.skills && mentor.skills.length > 0 && (
-                        <div className="flex flex-wrap gap-2 mb-4">
+                        <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
                           {mentor.skills.slice(0, 5).map((skill, idx) => (
-                            <Badge key={idx} variant="secondary">
+                            <Badge key={idx} variant="secondary" className="text-xs">
                               {skill}
                             </Badge>
                           ))}
@@ -287,61 +287,65 @@ const Mentorship = () => {
                       )}
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button className="w-full" onClick={() => setSelectedMentor(mentor)}>
-                            <Calendar className="w-4 h-4 mr-2" />
+                          <Button className="w-full h-9 sm:h-10 text-sm" onClick={() => setSelectedMentor(mentor)}>
+                            <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
                             Book Session
                           </Button>
                         </DialogTrigger>
-                        <DialogContent className="max-w-md">
+                        <DialogContent className="max-w-md mx-3 sm:mx-0">
                           <DialogHeader>
-                            <DialogTitle>Book Mentorship Session</DialogTitle>
-                            <DialogDescription>
+                            <DialogTitle className="text-base sm:text-lg">Book Mentorship Session</DialogTitle>
+                            <DialogDescription className="text-xs sm:text-sm">
                               Schedule a session with {mentor.full_name}
                             </DialogDescription>
                           </DialogHeader>
-                          <div className="space-y-4 mt-4">
+                          <div className="space-y-3 sm:space-y-4 mt-4">
                             <div>
-                              <Label htmlFor="topic">Topic *</Label>
+                              <Label htmlFor="topic" className="text-sm">Topic *</Label>
                               <Input
                                 id="topic"
                                 placeholder="What would you like to discuss?"
                                 value={bookingData.topic}
                                 onChange={(e) => setBookingData({ ...bookingData, topic: e.target.value })}
+                                className="h-9 sm:h-10 text-sm"
                               />
                             </div>
                             <div>
-                              <Label htmlFor="description">Description (Optional)</Label>
+                              <Label htmlFor="description" className="text-sm">Description (Optional)</Label>
                               <Textarea
                                 id="description"
                                 placeholder="Add more details about what you'd like to learn..."
                                 value={bookingData.description}
                                 onChange={(e) => setBookingData({ ...bookingData, description: e.target.value })}
                                 rows={3}
+                                className="text-sm"
                               />
                             </div>
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                               <div>
-                                <Label htmlFor="date">Date *</Label>
+                                <Label htmlFor="date" className="text-sm">Date *</Label>
                                 <Input
                                   id="date"
                                   type="date"
                                   value={bookingData.scheduledDate}
                                   onChange={(e) => setBookingData({ ...bookingData, scheduledDate: e.target.value })}
                                   min={new Date().toISOString().split('T')[0]}
+                                  className="h-9 sm:h-10 text-sm"
                                 />
                               </div>
                               <div>
-                                <Label htmlFor="time">Time *</Label>
+                                <Label htmlFor="time" className="text-sm">Time *</Label>
                                 <Input
                                   id="time"
                                   type="time"
                                   value={bookingData.scheduledTime}
                                   onChange={(e) => setBookingData({ ...bookingData, scheduledTime: e.target.value })}
+                                  className="h-9 sm:h-10 text-sm"
                                 />
                               </div>
                             </div>
                             <Button 
-                              className="w-full" 
+                              className="w-full h-9 sm:h-10 text-sm" 
                               onClick={handleBookSession}
                               disabled={submitting}
                             >
@@ -364,17 +368,17 @@ const Mentorship = () => {
             )}
           </TabsContent>
 
-          <TabsContent value="sessions" className="space-y-6">
+          <TabsContent value="sessions" className="space-y-4 sm:space-y-6">
             {sessions.length === 0 ? (
               <Card>
-                <CardContent className="py-12 text-center text-muted-foreground">
-                  <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                  <p>No mentorship sessions yet</p>
-                  <p className="text-sm">Book your first session to get started</p>
+                <CardContent className="py-8 sm:py-12 text-center text-muted-foreground">
+                  <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm sm:text-base">No mentorship sessions yet</p>
+                  <p className="text-xs sm:text-sm">Book your first session to get started</p>
                 </CardContent>
               </Card>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {sessions.map((session) => {
                   const isMentor = session.mentor.id === currentUser?.id;
                   const otherUser = isMentor ? session.mentee : session.mentor;
@@ -382,42 +386,43 @@ const Mentorship = () => {
 
                   return (
                     <Card key={session.id}>
-                      <CardHeader>
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-4 flex-1">
-                            <Avatar className="w-10 h-10">
-                              <AvatarFallback className="bg-indigo-500/10 text-indigo-500">
+                      <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-6">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2 sm:gap-4 flex-1 min-w-0">
+                            <Avatar className="w-8 h-8 sm:w-10 sm:h-10 flex-shrink-0">
+                              <AvatarFallback className="bg-indigo-500/10 text-indigo-500 text-xs sm:text-sm">
                                 {otherUser.full_name?.charAt(0).toUpperCase()}
                               </AvatarFallback>
                             </Avatar>
-                            <div className="flex-1">
-                              <CardTitle className="text-base">{session.topic}</CardTitle>
-                              <CardDescription className="mt-1">
+                            <div className="flex-1 min-w-0">
+                              <CardTitle className="text-sm sm:text-base truncate">{session.topic}</CardTitle>
+                              <CardDescription className="mt-1 text-xs sm:text-sm truncate">
                                 {isMentor ? 'Mentee' : 'Mentor'}: {otherUser.full_name}
                               </CardDescription>
                               {session.description && (
-                                <p className="text-sm text-muted-foreground mt-2">
+                                <p className="text-xs sm:text-sm text-muted-foreground mt-2 line-clamp-2">
                                   {session.description}
                                 </p>
                               )}
                             </div>
                           </div>
-                          <Badge variant="outline" className={statusInfo.color}>
+                          <Badge variant="outline" className={`${statusInfo.color} text-xs whitespace-nowrap flex-shrink-0`}>
                             {statusInfo.label}
                           </Badge>
                         </div>
                       </CardHeader>
-                      <CardContent>
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <CardContent className="px-3 sm:px-6">
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0">
+                          <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground">
                             {session.scheduled_at && (
                               <>
                                 <div className="flex items-center gap-1">
-                                  <Calendar className="w-4 h-4" />
-                                  {new Date(session.scheduled_at).toLocaleDateString()}
+                                  <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                                  <span className="hidden sm:inline">{new Date(session.scheduled_at).toLocaleDateString()}</span>
+                                  <span className="sm:hidden">{new Date(session.scheduled_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</span>
                                 </div>
                                 <div className="flex items-center gap-1">
-                                  <Clock className="w-4 h-4" />
+                                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                                   {new Date(session.scheduled_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                 </div>
                               </>
@@ -427,21 +432,23 @@ const Mentorship = () => {
                             </div>
                           </div>
                           {isMentor && session.status === 'pending' && (
-                            <div className="flex gap-2">
+                            <div className="flex gap-2 w-full sm:w-auto">
                               <Button 
                                 size="sm" 
                                 variant="outline"
                                 onClick={() => handleUpdateSessionStatus(session.id, 'confirmed')}
+                                className="flex-1 sm:flex-none h-8 text-xs sm:text-sm"
                               >
-                                <CheckCircle2 className="w-4 h-4 mr-1" />
+                                <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
                                 Accept
                               </Button>
                               <Button 
                                 size="sm" 
                                 variant="outline"
+                                className="flex-1 sm:flex-none h-8 text-xs sm:text-sm"
                                 onClick={() => handleUpdateSessionStatus(session.id, 'cancelled')}
                               >
-                                <XCircle className="w-4 h-4 mr-1" />
+                                <XCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
                                 Decline
                               </Button>
                             </div>
@@ -449,9 +456,10 @@ const Mentorship = () => {
                           {session.status === 'confirmed' && (
                             <Button 
                               size="sm"
+                              className="h-8 text-xs sm:text-sm w-full sm:w-auto"
                               onClick={() => handleUpdateSessionStatus(session.id, 'completed')}
                             >
-                              <CheckCircle2 className="w-4 h-4 mr-1" />
+                              <CheckCircle2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1" />
                               Mark Complete
                             </Button>
                           )}

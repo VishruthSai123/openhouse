@@ -219,10 +219,10 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Top Navigation */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-16 items-center justify-between px-4">
-          <div className="flex items-center gap-6">
-            <h1 className="text-xl font-bold">Open House</h1>
-            <nav className="hidden md:flex items-center gap-1">
+        <div className="container flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4">
+          <div className="flex items-center gap-2 sm:gap-6">
+            <h1 className="text-base sm:text-xl font-bold">Open House</h1>
+            <nav className="hidden lg:flex items-center gap-1">
               <Button variant="ghost" size="sm" onClick={() => navigate('/home')}>
                 <Home className="w-4 h-4 mr-2" />
                 Home
@@ -246,37 +246,37 @@ const Dashboard = () => {
             </nav>
           </div>
           
-          <div className="flex items-center gap-3">
-            <Button variant="ghost" size="sm" className="gap-2">
-              <Coins className="w-4 h-4 text-yellow-500" />
-              <span className="font-semibold">{profile?.builder_coins || 0}</span>
+          <div className="flex items-center gap-1 sm:gap-3">
+            <Button variant="ghost" size="sm" className="gap-1 sm:gap-2 px-2 sm:px-3">
+              <Coins className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
+              <span className="font-semibold text-xs sm:text-sm">{profile?.builder_coins || 0}</span>
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleLogout}>
-              <LogOut className="w-4 h-4" />
+            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={handleLogout}>
+              <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container px-4 py-8 max-w-7xl mx-auto">
+      <main className="container px-3 sm:px-4 py-4 sm:py-8 max-w-7xl mx-auto">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <div className="flex items-start justify-between mb-6">
-            <div className="flex items-center gap-4">
-              <Avatar className="w-16 h-16">
-                <AvatarFallback className={`${roleInfo.bgColor} ${roleInfo.color} text-lg font-semibold`}>
+        <div className="mb-6 sm:mb-8">
+          <div className="flex flex-col sm:flex-row items-start justify-between mb-4 sm:mb-6 gap-4">
+            <div className="flex items-center gap-3 sm:gap-4 w-full sm:w-auto">
+              <Avatar className="w-12 h-12 sm:w-16 sm:h-16 flex-shrink-0">
+                <AvatarFallback className={`${roleInfo.bgColor} ${roleInfo.color} text-base sm:text-lg font-semibold`}>
                   {profile?.full_name?.charAt(0).toUpperCase() || profile?.email?.charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <h2 className="text-2xl font-bold">Welcome back, {profile?.full_name?.split(' ')[0] || 'Builder'}! 👋</h2>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge variant="secondary" className={`${roleInfo.bgColor}`}>
+              <div className="flex-1 min-w-0">
+                <h2 className="text-lg sm:text-2xl font-bold truncate">Welcome back, {profile?.full_name?.split(' ')[0] || 'Builder'}! 👋</h2>
+                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                  <Badge variant="secondary" className={`${roleInfo.bgColor} text-xs`}>
                     <RoleIcon className={`w-3 h-3 mr-1 ${roleInfo.color}`} />
                     {profile?.role?.charAt(0).toUpperCase() + profile?.role?.slice(1)}
                   </Badge>
                   {!profile?.has_paid && (
-                    <Badge variant="destructive">Payment Pending</Badge>
+                    <Badge variant="destructive" className="text-xs">Payment Pending</Badge>
                   )}
                 </div>
               </div>
@@ -284,51 +284,51 @@ const Dashboard = () => {
           </div>
 
           {/* Quick Stats */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Builder Coins</CardTitle>
+              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Builder Coins</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                 <div className="flex items-center gap-2">
-                  <Coins className="w-5 h-5 text-yellow-500" />
-                  <span className="text-2xl font-bold">{profile?.builder_coins || 0}</span>
+                  <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
+                  <span className="text-xl sm:text-2xl font-bold">{profile?.builder_coins || 0}</span>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">My Ideas</CardTitle>
+              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">My Ideas</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                 <div className="flex items-center gap-2">
-                  <Lightbulb className="w-5 h-5 text-primary" />
-                  <span className="text-2xl font-bold">{stats.ideasCount}</span>
+                  <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
+                  <span className="text-xl sm:text-2xl font-bold">{stats.ideasCount}</span>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Projects</CardTitle>
+              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Projects</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                 <div className="flex items-center gap-2">
-                  <Briefcase className="w-5 h-5 text-green-500" />
-                  <span className="text-2xl font-bold">{stats.projectsCount}</span>
+                  <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
+                  <span className="text-xl sm:text-2xl font-bold">{stats.projectsCount}</span>
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-sm font-medium text-muted-foreground">Connections</CardTitle>
+              <CardHeader className="pb-2 sm:pb-3 px-3 sm:px-6 pt-3 sm:pt-6">
+                <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground">Connections</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                 <div className="flex items-center gap-2">
-                  <Users className="w-5 h-5 text-blue-500" />
-                  <span className="text-2xl font-bold">{stats.connectionsCount}</span>
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+                  <span className="text-xl sm:text-2xl font-bold">{stats.connectionsCount}</span>
                 </div>
               </CardContent>
             </Card>
@@ -336,58 +336,58 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
           <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate('/ideas/new')}>
-            <CardHeader>
+            <CardHeader className="p-3 sm:p-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-primary/10">
-                  <Plus className="w-5 h-5 text-primary" />
+                <div className="p-2 rounded-lg bg-primary/10 flex-shrink-0">
+                  <Plus className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                 </div>
-                <div>
-                  <CardTitle className="text-lg">Post an Idea</CardTitle>
-                  <CardDescription>Share your startup idea</CardDescription>
+                <div className="min-w-0">
+                  <CardTitle className="text-sm sm:text-lg truncate">Post an Idea</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Share your startup idea</CardDescription>
                 </div>
               </div>
             </CardHeader>
           </Card>
 
           <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate('/find-team')}>
-            <CardHeader>
+            <CardHeader className="p-3 sm:p-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-blue-500/10">
-                  <Users className="w-5 h-5 text-blue-500" />
+                <div className="p-2 rounded-lg bg-blue-500/10 flex-shrink-0">
+                  <Users className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                 </div>
-                <div>
-                  <CardTitle className="text-lg">Find Co-Founders</CardTitle>
-                  <CardDescription>Build your dream team</CardDescription>
+                <div className="min-w-0">
+                  <CardTitle className="text-sm sm:text-lg truncate">Find Co-Founders</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Build your dream team</CardDescription>
                 </div>
               </div>
             </CardHeader>
           </Card>
 
           <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate('/projects/new')}>
-            <CardHeader>
+            <CardHeader className="p-3 sm:p-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-green-500/10">
-                  <Briefcase className="w-5 h-5 text-green-500" />
+                <div className="p-2 rounded-lg bg-green-500/10 flex-shrink-0">
+                  <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                 </div>
-                <div>
-                  <CardTitle className="text-lg">Start a Project</CardTitle>
-                  <CardDescription>Create a build space</CardDescription>
+                <div className="min-w-0">
+                  <CardTitle className="text-sm sm:text-lg truncate">Start a Project</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Create a build space</CardDescription>
                 </div>
               </div>
             </CardHeader>
           </Card>
 
           <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate('/leaderboard')}>
-            <CardHeader>
+            <CardHeader className="p-3 sm:p-6">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-yellow-500/10">
-                  <Trophy className="w-5 h-5 text-yellow-500" />
+                <div className="p-2 rounded-lg bg-yellow-500/10 flex-shrink-0">
+                  <Trophy className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
                 </div>
-                <div>
-                  <CardTitle className="text-lg">Leaderboard</CardTitle>
-                  <CardDescription>Check your ranking</CardDescription>
+                <div className="min-w-0">
+                  <CardTitle className="text-sm sm:text-lg truncate">Leaderboard</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Check your ranking</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -396,31 +396,31 @@ const Dashboard = () => {
 
         {/* Recent Activity */}
         <Card>
-          <CardHeader>
-            <CardTitle>Recent Activity</CardTitle>
-            <CardDescription>Stay updated with your latest actions</CardDescription>
+          <CardHeader className="px-3 sm:px-6">
+            <CardTitle className="text-base sm:text-xl">Recent Activity</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Stay updated with your latest actions</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
             {recentActivity.length === 0 ? (
-              <div className="text-center py-12 text-muted-foreground">
-                <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-                <p>No recent activity yet</p>
-                <p className="text-sm">Start by posting an idea or joining a project!</p>
+              <div className="text-center py-8 sm:py-12 text-muted-foreground">
+                <Calendar className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 opacity-50" />
+                <p className="text-sm sm:text-base">No recent activity yet</p>
+                <p className="text-xs sm:text-sm">Start by posting an idea or joining a project!</p>
               </div>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {recentActivity.map((activity, index) => (
-                  <div key={index} className="flex items-start gap-4 pb-4 border-b last:border-0">
-                    <div className={`p-2 rounded-lg ${activity.bgColor}`}>
+                  <div key={index} className="flex items-start gap-2 sm:gap-4 pb-3 sm:pb-4 border-b last:border-0">
+                    <div className={`p-1.5 sm:p-2 rounded-lg ${activity.bgColor} flex-shrink-0`}>
                       {activity.icon}
                     </div>
-                    <div className="flex-1">
-                      <p className="font-medium">{activity.title}</p>
-                      <p className="text-sm text-muted-foreground">{activity.description}</p>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm sm:text-base truncate">{activity.title}</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{activity.description}</p>
                       <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
                     </div>
                     {activity.link && (
-                      <Button variant="ghost" size="sm" onClick={() => navigate(activity.link)}>
+                      <Button variant="ghost" size="sm" className="text-xs sm:text-sm h-7 sm:h-9 flex-shrink-0" onClick={() => navigate(activity.link)}>
                         View
                       </Button>
                     )}

@@ -153,40 +153,41 @@ const Projects = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center gap-4 px-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="w-5 h-5" />
+        <div className="container flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4">
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <Briefcase className="w-6 h-6 text-primary" />
-            <h1 className="text-xl font-bold">Build Spaces</h1>
+            <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+            <h1 className="text-base sm:text-xl font-bold">Build Spaces</h1>
           </div>
           <div className="ml-auto">
-            <Button onClick={() => navigate('/projects/new')}>
-              <Plus className="w-4 h-4 mr-2" />
-              New Project
+            <Button onClick={() => navigate('/projects/new')} size="sm" className="h-8 sm:h-10 text-xs sm:text-sm">
+              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">New Project</span>
+              <span className="sm:hidden">New</span>
             </Button>
           </div>
         </div>
       </header>
 
-      <main className="container px-4 py-8 max-w-7xl mx-auto">
+      <main className="container px-3 sm:px-4 py-4 sm:py-8 max-w-7xl mx-auto">
         {/* Filters */}
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col sm:flex-row gap-4">
+        <Card className="mb-4 sm:mb-6">
+          <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+            <div className="flex flex-col gap-3 sm:gap-4">
+              <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                 <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   <Input
                     placeholder="Search projects..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10"
+                    className="pl-9 sm:pl-10 h-9 sm:h-10 text-sm"
                   />
                 </div>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-sm">
                     <SelectValue placeholder="Category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -197,7 +198,7 @@ const Projects = () => {
                   </SelectContent>
                 </Select>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full sm:w-[200px]">
+                  <SelectTrigger className="w-full sm:w-[180px] h-9 sm:h-10 text-sm">
                     <SelectValue placeholder="Status" />
                   </SelectTrigger>
                   <SelectContent>
@@ -215,22 +216,22 @@ const Projects = () => {
 
         {/* Projects Grid */}
         {loading ? (
-          <div className="text-center py-12">
-            <div className="animate-pulse text-muted-foreground">Loading projects...</div>
+          <div className="text-center py-8 sm:py-12">
+            <div className="animate-pulse text-muted-foreground text-sm">Loading projects...</div>
           </div>
         ) : filteredProjects.length === 0 ? (
           <Card>
-            <CardContent className="text-center py-12">
-              <Briefcase className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground">No projects found</p>
-              <Button className="mt-4" onClick={() => navigate('/projects/new')}>
+            <CardContent className="text-center py-8 sm:py-12">
+              <Briefcase className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 opacity-50" />
+              <p className="text-muted-foreground text-sm sm:text-base">No projects found</p>
+              <Button className="mt-4 h-9 sm:h-10 text-sm" onClick={() => navigate('/projects/new')}>
                 <Plus className="w-4 h-4 mr-2" />
                 Create Your First Project
               </Button>
             </CardContent>
           </Card>
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredProjects.map((project) => {
               const statusConfig = getStatusConfig(project.status);
               const StatusIcon = statusConfig.icon;
@@ -242,11 +243,11 @@ const Projects = () => {
                   className="hover:shadow-lg transition-shadow cursor-pointer"
                   onClick={() => navigate(`/projects/${project.id}`)}
                 >
-                  <CardHeader>
+                  <CardHeader className="px-3 sm:px-6 pt-4 sm:pt-6 pb-3">
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex-1 min-w-0">
-                        <CardTitle className="text-lg truncate">{project.title}</CardTitle>
-                        <div className="flex items-center gap-2 mt-2">
+                        <CardTitle className="text-base sm:text-lg truncate">{project.title}</CardTitle>
+                        <div className="flex items-center gap-1.5 sm:gap-2 mt-2 flex-wrap">
                           <Badge variant="secondary" className="text-xs">
                             {project.category}
                           </Badge>
@@ -257,14 +258,14 @@ const Projects = () => {
                         </div>
                       </div>
                       {project.visibility === 'private' ? (
-                        <Lock className="w-4 h-4 text-muted-foreground" />
+                        <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
                       ) : (
-                        <Globe className="w-4 h-4 text-muted-foreground" />
+                        <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
                       )}
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <p className="text-sm text-muted-foreground line-clamp-3">
+                  <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
+                    <p className="text-xs sm:text-sm text-muted-foreground line-clamp-3">
                       {project.description}
                     </p>
 
@@ -284,17 +285,17 @@ const Projects = () => {
                     )}
 
                     <div className="flex items-center justify-between pt-2 border-t">
-                      <div className="flex items-center gap-2">
-                        <Avatar className="w-6 h-6">
+                      <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                        <Avatar className="w-5 h-5 sm:w-6 sm:h-6 flex-shrink-0">
                           <AvatarFallback className="text-xs">
                             {project.profiles?.full_name?.charAt(0).toUpperCase() || 'A'}
                           </AvatarFallback>
                         </Avatar>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-xs text-muted-foreground truncate">
                           {project.profiles?.full_name || 'Anonymous'}
                         </span>
                       </div>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                      <div className="flex items-center gap-2 sm:gap-3 text-xs text-muted-foreground flex-shrink-0">
                         <div className="flex items-center gap-1">
                           <Users className="w-3 h-3" />
                           {memberCount + 1}

@@ -219,25 +219,25 @@ const IdeasHub = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center gap-4 px-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="w-5 h-5" />
+        <div className="container flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4">
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <Lightbulb className="w-6 h-6 text-primary" />
-            <h1 className="text-xl font-bold">Idea Hub</h1>
+            <Lightbulb className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+            <h1 className="text-base sm:text-xl font-bold">Idea Hub</h1>
           </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="flex items-center justify-between mb-6">
+      <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
           <div>
-            <p className="text-muted-foreground">
+            <p className="text-xs sm:text-sm text-muted-foreground">
               Discover amazing startup ideas and connect with founders
             </p>
           </div>
-          <Button onClick={() => navigate('/ideas/new')} size="lg">
+          <Button onClick={() => navigate('/ideas/new')} size="sm" className="sm:size-lg w-full sm:w-auto">
             <Plus className="w-4 h-4 mr-2" />
             Post Your Idea
           </Button>
@@ -245,24 +245,26 @@ const IdeasHub = () => {
 
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+          <Search className="absolute left-3 top-2.5 sm:top-3 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
           <Input
             placeholder="Search ideas..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10"
+            className="pl-9 sm:pl-10 h-9 sm:h-10 text-sm"
           />
         </div>
 
         {/* Category Tabs */}
-        <Tabs defaultValue="all" className="mb-8 mt-6" onValueChange={setSelectedCategory}>
-          <TabsList className="flex-wrap h-auto">
-            {categories.map(cat => (
-              <TabsTrigger key={cat} value={cat} className="capitalize">
-                {cat}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+        <Tabs defaultValue="all" className="mb-6 sm:mb-8 mt-4 sm:mt-6" onValueChange={setSelectedCategory}>
+          <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
+            <TabsList className="inline-flex w-max sm:w-auto flex-nowrap sm:flex-wrap h-auto">
+              {categories.map(cat => (
+                <TabsTrigger key={cat} value={cat} className="capitalize text-xs sm:text-sm whitespace-nowrap">
+                  {cat}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
         </Tabs>
 
         {/* Ideas Grid */}
@@ -277,29 +279,29 @@ const IdeasHub = () => {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {filteredIdeas.map(idea => (
               <Card
                 key={idea.id}
                 className="hover:shadow-lg transition-shadow cursor-pointer group"
                 onClick={() => navigate(`/ideas/${idea.id}`)}
               >
-                <CardHeader>
-                  <div className="flex items-start justify-between mb-2">
-                    <Badge variant="secondary">{idea.category}</Badge>
-                    <Badge variant="outline">{stages[idea.stage as keyof typeof stages]}</Badge>
+                <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-6 pb-2 sm:pb-3">
+                  <div className="flex items-start justify-between mb-2 gap-2">
+                    <Badge variant="secondary" className="text-xs">{idea.category}</Badge>
+                    <Badge variant="outline" className="text-xs whitespace-nowrap">{stages[idea.stage as keyof typeof stages]}</Badge>
                   </div>
-                  <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors">
+                  <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors text-base sm:text-lg">
                     {idea.title}
                   </CardTitle>
-                  <CardDescription className="line-clamp-3">
+                  <CardDescription className="line-clamp-3 text-xs sm:text-sm">
                     {idea.description}
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
                   {/* Looking For Tags */}
                   {idea.looking_for && idea.looking_for.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-4">
+                    <div className="flex flex-wrap gap-1 mb-3 sm:mb-4">
                       {idea.looking_for.slice(0, 3).map((tag, idx) => (
                         <Badge key={idx} variant="outline" className="text-xs">
                           {tag}
@@ -314,17 +316,17 @@ const IdeasHub = () => {
                   )}
 
                   {/* Author & Stats */}
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2">
-                      <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold">
+                  <div className="flex items-center justify-between text-xs sm:text-sm">
+                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+                      <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold flex-shrink-0">
                         {idea.profiles.full_name?.charAt(0) || '?'}
                       </div>
-                      <span className="text-muted-foreground">
+                      <span className="text-muted-foreground truncate">
                         {idea.profiles.full_name}
                       </span>
                     </div>
 
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">,
                       <button
                         onClick={(e) => {
                           e.stopPropagation();

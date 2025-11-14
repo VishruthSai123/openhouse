@@ -19,6 +19,11 @@ import CreateProject from "./pages/CreateProject";
 import ProjectDetail from "./pages/ProjectDetail";
 import Leaderboard from "./pages/Leaderboard";
 import Mentorship from "./pages/Mentorship";
+import Feed from "./pages/Feed";
+import Messages from "./pages/Messages";
+import PostDetail from "./pages/PostDetail";
+import Connections from "./pages/Connections";
+import MobileBottomNav from "./components/MobileBottomNav";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
@@ -37,6 +42,10 @@ const App = () => (
             <Route path="/payment" element={<Payment />} />
             <Route path="/home" element={<Home />} />
             <Route path="/dashboard" element={<Home />} />
+            <Route path="/feed" element={<Feed />} />
+            <Route path="/feed/:postId" element={<PostDetail />} />
+            <Route path="/messages" element={<Messages />} />
+            <Route path="/connections" element={<Connections />} />
             <Route path="/ideas" element={<IdeasHub />} />
             <Route path="/ideas/new" element={<CreateIdea />} />
             <Route path="/ideas/:id" element={<IdeaDetail />} />
@@ -49,6 +58,7 @@ const App = () => (
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <MobileBottomNav />
         </BrowserRouter>
       </TooltipProvider>
     </QueryClientProvider>

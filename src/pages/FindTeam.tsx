@@ -310,56 +310,59 @@ const FindTeam = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container flex h-16 items-center gap-4 px-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="w-5 h-5" />
+        <div className="container flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4">
+          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <Users className="w-6 h-6 text-primary" />
-            <h1 className="text-xl font-bold">Find Co-Founders</h1>
+            <Users className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+            <h1 className="text-base sm:text-xl font-bold">Find Co-Founders</h1>
           </div>
         </div>
       </header>
 
-      <main className="container px-4 py-8 max-w-7xl mx-auto">
+      <main className="container px-3 sm:px-4 py-4 sm:py-8 max-w-7xl mx-auto">
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
-            <TabsTrigger value="browse" className="gap-2">
-              <Search className="w-4 h-4" />
-              Browse
+          <TabsList className="grid w-full grid-cols-3 mb-4 sm:mb-6 h-auto">
+            <TabsTrigger value="browse" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Search className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Browse</span>
+              <span className="sm:hidden">Find</span>
             </TabsTrigger>
-            <TabsTrigger value="requests" className="gap-2">
-              <Mail className="w-4 h-4" />
-              Requests
+            <TabsTrigger value="requests" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">Requests</span>
+              <span className="sm:hidden">Req</span>
               {pendingRequests.length > 0 && (
-                <Badge variant="destructive" className="ml-1 h-5 w-5 p-0 flex items-center justify-center">
+                <Badge variant="destructive" className="ml-0.5 sm:ml-1 h-4 w-4 sm:h-5 sm:w-5 p-0 flex items-center justify-center text-[10px] sm:text-xs">
                   {pendingRequests.length}
                 </Badge>
               )}
             </TabsTrigger>
-            <TabsTrigger value="connections" className="gap-2">
-              <UserPlus className="w-4 h-4" />
-              My Team ({acceptedConnections.length})
+            <TabsTrigger value="connections" className="gap-1 sm:gap-2 text-xs sm:text-sm py-2">
+              <UserPlus className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+              <span className="hidden sm:inline">My Team ({acceptedConnections.length})</span>
+              <span className="sm:hidden">Team ({acceptedConnections.length})</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Browse Tab */}
-          <TabsContent value="browse" className="space-y-6">
+          <TabsContent value="browse" className="space-y-4 sm:space-y-6">
             {/* Filters */}
             <Card>
-              <CardContent className="pt-6">
-                <div className="flex flex-col sm:flex-row gap-4">
+              <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+                <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
                   <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     <Input
                       placeholder="Search by name, skills, interests..."
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
-                      className="pl-10"
+                      className="pl-9 sm:pl-10 h-9 sm:h-10 text-sm"
                     />
                   </div>
                   <Select value={roleFilter} onValueChange={setRoleFilter}>
-                    <SelectTrigger className="w-full sm:w-[200px]">
+                    <SelectTrigger className="w-full sm:w-[200px] h-9 sm:h-10 text-sm">
                       <SelectValue placeholder="Filter by role" />
                     </SelectTrigger>
                     <SelectContent>
@@ -378,8 +381,8 @@ const FindTeam = () => {
 
             {/* Users Grid */}
             {loading ? (
-              <div className="text-center py-12">
-                <div className="animate-pulse text-muted-foreground">Loading users...</div>
+              <div className="text-center py-8 sm:py-12">
+                <div className="animate-pulse text-muted-foreground text-sm">Loading users...</div>
               </div>
             ) : filteredUsers.length === 0 ? (
               <Card>
@@ -389,23 +392,23 @@ const FindTeam = () => {
                 </CardContent>
               </Card>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                 {filteredUsers.map((user) => {
                   const connection = getConnectionStatus(user.id);
                   const roleInfo = user.role ? roleConfig[user.role as keyof typeof roleConfig] : roleConfig.founder;
 
                   return (
                     <Card key={user.id} className="hover:shadow-lg transition-shadow">
-                      <CardHeader>
-                        <div className="flex items-start gap-4">
-                          <Avatar className="w-12 h-12">
-                            <AvatarFallback className={`${roleInfo.bgColor} ${roleInfo.color} font-semibold`}>
+                      <CardHeader className="px-3 sm:px-6 pt-4 sm:pt-6 pb-3">
+                        <div className="flex items-start gap-3 sm:gap-4">
+                          <Avatar className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+                            <AvatarFallback className={`${roleInfo.bgColor} ${roleInfo.color} font-semibold text-sm sm:text-base`}>
                               {user.full_name?.charAt(0).toUpperCase() || user.email.charAt(0).toUpperCase()}
                             </AvatarFallback>
                           </Avatar>
                           <div className="flex-1 min-w-0">
-                            <CardTitle className="text-lg truncate">{user.full_name || 'Anonymous'}</CardTitle>
-                            <div className="flex items-center gap-2 mt-1">
+                            <CardTitle className="text-base sm:text-lg truncate">{user.full_name || 'Anonymous'}</CardTitle>
+                            <div className="flex items-center gap-1.5 sm:gap-2 mt-1 flex-wrap">
                               <Badge variant="secondary" className={`${roleInfo.bgColor} text-xs`}>
                                 <Briefcase className={`w-3 h-3 mr-1 ${roleInfo.color}`} />
                                 {user.role}
@@ -418,14 +421,14 @@ const FindTeam = () => {
                           </div>
                         </div>
                       </CardHeader>
-                      <CardContent className="space-y-4">
+                      <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
                         {user.bio && (
-                          <p className="text-sm text-muted-foreground line-clamp-2">{user.bio}</p>
+                          <p className="text-xs sm:text-sm text-muted-foreground line-clamp-2">{user.bio}</p>
                         )}
                         
                         {user.skills && user.skills.length > 0 && (
                           <div>
-                            <p className="text-xs font-semibold mb-2 flex items-center gap-1">
+                            <p className="text-xs font-semibold mb-1.5 sm:mb-2 flex items-center gap-1">
                               <Target className="w-3 h-3" />
                               Skills
                             </p>
@@ -449,7 +452,7 @@ const FindTeam = () => {
                             {connection.status === 'pending' && (
                               <>
                                 <Clock className="w-4 h-4 text-yellow-500" />
-                                <span className="text-sm text-muted-foreground">
+                                <span className="text-xs sm:text-sm text-muted-foreground">
                                   {connection.sender_id === currentUser?.id ? 'Request sent' : 'Request received'}
                                 </span>
                               </>
@@ -457,13 +460,13 @@ const FindTeam = () => {
                             {connection.status === 'accepted' && (
                               <>
                                 <CheckCircle2 className="w-4 h-4 text-green-500" />
-                                <span className="text-sm text-green-500">Connected</span>
+                                <span className="text-xs sm:text-sm text-green-500">Connected</span>
                               </>
                             )}
                             {connection.status === 'rejected' && (
                               <>
                                 <XCircle className="w-4 h-4 text-red-500" />
-                                <span className="text-sm text-muted-foreground">Request declined</span>
+                                <span className="text-xs sm:text-sm text-muted-foreground">Request declined</span>
                               </>
                             )}
                           </div>
@@ -471,24 +474,24 @@ const FindTeam = () => {
                           <Dialog>
                             <DialogTrigger asChild>
                               <Button 
-                                className="w-full" 
+                                className="w-full h-9 sm:h-10 text-sm" 
                                 size="sm"
                                 onClick={() => setSelectedUser(user)}
                               >
-                                <Send className="w-4 h-4 mr-2" />
+                                <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
                                 Send Request
                               </Button>
                             </DialogTrigger>
-                            <DialogContent>
+                            <DialogContent className="mx-3 sm:mx-0">
                               <DialogHeader>
-                                <DialogTitle>Send Connection Request</DialogTitle>
-                                <DialogDescription>
+                                <DialogTitle className="text-base sm:text-lg">Send Connection Request</DialogTitle>
+                                <DialogDescription className="text-xs sm:text-sm">
                                   Send a connection request to {user.full_name}
                                 </DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4 py-4">
                                 <div className="space-y-2">
-                                  <Label htmlFor="message">Message (Optional)</Label>
+                                  <Label htmlFor="message" className="text-sm">Message (Optional)</Label>
                                   <Textarea
                                     id="message"
                                     placeholder="Introduce yourself and explain why you'd like to connect..."
@@ -496,6 +499,7 @@ const FindTeam = () => {
                                     onChange={(e) => setConnectionMessage(e.target.value)}
                                     rows={4}
                                     maxLength={500}
+                                    className="text-sm"
                                   />
                                   <p className="text-xs text-muted-foreground text-right">
                                     {connectionMessage.length}/500
@@ -506,6 +510,7 @@ const FindTeam = () => {
                                 <Button
                                   onClick={sendConnectionRequest}
                                   disabled={sendingRequest}
+                                  className="w-full sm:w-auto h-9 sm:h-10 text-sm"
                                 >
                                   {sendingRequest ? 'Sending...' : 'Send Request'}
                                 </Button>

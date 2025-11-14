@@ -269,64 +269,65 @@ const IdeaDetail = () => {
   if (!idea) return null;
 
   return (
-    <div className="min-h-screen bg-background py-8">
-      <div className="max-w-4xl mx-auto px-4">
+    <div className="min-h-screen bg-background py-4 sm:py-8">
+      <div className="max-w-4xl mx-auto px-3 sm:px-4">
         <Button
           variant="ghost"
           onClick={() => navigate('/ideas')}
-          className="mb-6"
+          className="mb-4 sm:mb-6 h-9 sm:h-10"
         >
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Ideas
         </Button>
 
         {/* Idea Card */}
-        <Card className="mb-6">
-          <CardHeader>
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex gap-2">
-                <Badge variant="secondary">{idea.category}</Badge>
-                <Badge variant="outline">{stages[idea.stage as keyof typeof stages]}</Badge>
+        <Card className="mb-4 sm:mb-6">
+          <CardHeader className="px-3 sm:px-6 pt-4 sm:pt-6">
+            <div className="flex items-start justify-between mb-3 sm:mb-4 gap-2">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                <Badge variant="secondary" className="text-xs">{idea.category}</Badge>
+                <Badge variant="outline" className="text-xs whitespace-nowrap">{stages[idea.stage as keyof typeof stages]}</Badge>
               </div>
             </div>
             
-            <CardTitle className="text-3xl">{idea.title}</CardTitle>
+            <CardTitle className="text-xl sm:text-2xl lg:text-3xl">{idea.title}</CardTitle>
             
             {/* Author Info */}
-            <div className="flex items-center gap-3 mt-4">
-              <Avatar>
-                <AvatarFallback className="bg-primary/10">
+            <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4">
+              <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                <AvatarFallback className="bg-primary/10 text-xs sm:text-sm">
                   {idea.profiles.full_name?.charAt(0) || '?'}
                 </AvatarFallback>
               </Avatar>
-              <div>
-                <p className="font-semibold">{idea.profiles.full_name}</p>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  {idea.profiles.role && <span>{idea.profiles.role}</span>}
+              <div className="min-w-0">
+                <p className="font-semibold text-sm sm:text-base truncate">{idea.profiles.full_name}</p>
+                <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
+                  {idea.profiles.role && <span className="truncate">{idea.profiles.role}</span>}
                   <span>•</span>
                   <span className="flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
-                    {formatDistanceToNow(new Date(idea.created_at), { addSuffix: true })}
+                    <span className="hidden sm:inline">{formatDistanceToNow(new Date(idea.created_at), { addSuffix: true })}</span>
+                    <span className="sm:hidden">{formatDistanceToNow(new Date(idea.created_at), { addSuffix: true }).replace(' ago', '')}</span>
                   </span>
                 </div>
               </div>
             </div>
           </CardHeader>
 
-          <CardContent className="space-y-6">
+          <CardContent className="px-3 sm:px-6 space-y-4 sm:space-y-6">
             {/* Description */}
             <div>
-              <h3 className="font-semibold mb-2">About This Idea</h3>
-              <p className="text-muted-foreground whitespace-pre-wrap">{idea.description}</p>
+              <h3 className="font-semibold mb-2 text-sm sm:text-base">About This Idea</h3>
+              <p className="text-muted-foreground whitespace-pre-wrap text-sm sm:text-base">{idea.description}</p>
             </div>
 
             {/* Looking For */}
             {idea.looking_for && idea.looking_for.length > 0 && (
               <div>
-                <h3 className="font-semibold mb-2">Looking For</h3>
-                <div className="flex flex-wrap gap-2">
+                <h3 className="font-semibold mb-2 text-sm sm:text-base">Looking For</h3>
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {idea.looking_for.map((tag, idx) => (
-                    <Badge key={idx} variant="outline">
+                    <Badge key={idx} variant="outline" className="text-xs">
                       {tag}
                     </Badge>
                   ))}
@@ -337,20 +338,20 @@ const IdeaDetail = () => {
             <Separator />
 
             {/* Actions */}
-            <div className="flex items-center gap-4">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">
               <Button
                 variant={hasVoted ? "default" : "outline"}
                 size="lg"
                 onClick={handleUpvote}
-                className="flex items-center gap-2"
+                className="flex items-center justify-center gap-2 h-10 sm:h-11 text-sm sm:text-base"
               >
-                <ArrowUpCircle className="w-5 h-5" />
+                <ArrowUpCircle className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>{hasVoted ? 'Upvoted' : 'Upvote'}</span>
-                <Badge variant="secondary">{idea.upvotes}</Badge>
+                <Badge variant="secondary" className="text-xs">{idea.upvotes}</Badge>
               </Button>
 
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <MessageSquare className="w-5 h-5" />
+              <div className="flex items-center justify-center gap-2 text-muted-foreground text-sm sm:text-base">
+                <MessageSquare className="w-4 h-4 sm:w-5 sm:h-5" />
                 <span>{comments.length} Comments</span>
               </div>
             </div>
@@ -359,54 +360,55 @@ const IdeaDetail = () => {
 
         {/* Comments Section */}
         <Card>
-          <CardHeader>
-            <CardTitle>Comments</CardTitle>
-            <CardDescription>Share your thoughts and feedback</CardDescription>
+          <CardHeader className="px-3 sm:px-6">
+            <CardTitle className="text-base sm:text-xl">Comments</CardTitle>
+            <CardDescription className="text-xs sm:text-sm">Share your thoughts and feedback</CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
             {/* Add Comment */}
-            <form onSubmit={handleCommentSubmit} className="mb-6">
+            <form onSubmit={handleCommentSubmit} className="mb-4 sm:mb-6">
               <Textarea
                 placeholder="Share your feedback, ask questions, or offer to collaborate..."
                 value={newComment}
                 onChange={(e) => setNewComment(e.target.value)}
                 rows={3}
                 maxLength={500}
-                className="mb-2"
+                className="mb-2 text-sm"
               />
-              <div className="flex items-center justify-between">
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
                 <p className="text-xs text-muted-foreground">
                   {newComment.length}/500 characters
                 </p>
                 <Button
                   type="submit"
                   disabled={!newComment.trim() || submitting}
+                  className="w-full sm:w-auto h-9 sm:h-10 text-sm"
                 >
-                  <Send className="w-4 h-4 mr-2" />
+                  <Send className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
                   {submitting ? 'Posting...' : 'Post Comment (+2 Coins)'}
                 </Button>
               </div>
             </form>
 
-            <Separator className="my-6" />
+            <Separator className="my-4 sm:my-6" />
 
             {/* Comments List */}
             {comments.length === 0 ? (
-              <p className="text-center text-muted-foreground py-8">
+              <p className="text-center text-muted-foreground py-6 sm:py-8 text-sm">
                 No comments yet. Be the first to comment!
               </p>
             ) : (
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {comments.map(comment => (
-                  <div key={comment.id} className="flex gap-3">
-                    <Avatar className="flex-shrink-0">
-                      <AvatarFallback className="bg-primary/10 text-sm">
+                  <div key={comment.id} className="flex gap-2 sm:gap-3">
+                    <Avatar className="flex-shrink-0 h-7 w-7 sm:h-9 sm:w-9">
+                      <AvatarFallback className="bg-primary/10 text-xs">
                         {comment.profiles.full_name?.charAt(0) || '?'}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm">
+                    <div className="flex-1 space-y-1 min-w-0">
+                      <div className="flex flex-wrap items-center gap-1 sm:gap-2">
+                        <span className="font-semibold text-xs sm:text-sm">
                           {comment.profiles.full_name}
                         </span>
                         {comment.profiles.role && (
@@ -422,7 +424,7 @@ const IdeaDetail = () => {
                           {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
                         </span>
                       </div>
-                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                      <p className="text-xs sm:text-sm text-muted-foreground whitespace-pre-wrap break-words">
                         {comment.content}
                       </p>
                     </div>
