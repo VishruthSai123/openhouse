@@ -73,6 +73,27 @@ const FindTeam = () => {
     if (currentUser) {
       loadUsers();
       loadConnections();
+
+      // Set up real-time subscription for connections
+      const channel = supabase
+        .channel('findteam-connections')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'connections',
+          },
+          () => {
+            // Reload connections when they change
+            loadConnections();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(channel);
+      };
     }
   }, [currentUser]);
 

@@ -45,6 +45,27 @@ const Dashboard = () => {
 
   useEffect(() => {
     loadUserData();
+
+    // Set up real-time subscription for connections
+    const channel = supabase
+      .channel('dashboard-connections')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'connections',
+        },
+        () => {
+          // Reload data when connections change
+          loadUserData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const loadUserData = async () => {
@@ -70,15 +91,18 @@ const Dashboard = () => {
       setProfile(profileData);
 
       // Load stats
-      const [ideasRes, projectsRes] = await Promise.all([
+      const [ideasRes, projectsRes, connectionsRes] = await Promise.all([
         supabase.from('ideas').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
         supabase.from('projects').select('*', { count: 'exact', head: true }).eq('creator_id', user.id),
+        supabase.from('connections').select('*', { count: 'exact', head: true })
+          .or(`sender_id.eq.${user.id},receiver_id.eq.${user.id}`)
+          .eq('status', 'accepted'),
       ]);
 
       setStats({
         ideasCount: ideasRes.count || 0,
         projectsCount: projectsRes.count || 0,
-        connectionsCount: 0, // TODO: Implement connections
+        connectionsCount: connectionsRes.count || 0,
       });
 
       // Load recent activity

@@ -58,6 +58,27 @@ const Projects = () => {
 
   useEffect(() => {
     loadProjects();
+
+    // Set up real-time subscription for projects
+    const channel = supabase
+      .channel('projects-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'projects',
+        },
+        () => {
+          // Reload projects when they change
+          loadProjects();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   useEffect(() => {
