@@ -88,10 +88,15 @@ serve(async (req) => {
     }
 
     // Create Razorpay order
+    // Receipt must be max 40 characters - use short hash of userId + timestamp
+    const shortUserId = userId.substring(0, 8); // First 8 chars of UUID
+    const timestamp = Date.now().toString().slice(-8); // Last 8 digits of timestamp
+    const receipt = `oh_${shortUserId}_${timestamp}`; // Format: oh_12345678_12345678 (29 chars max)
+    
     const orderData = {
       amount: amount * 100, // Convert to paise
       currency: 'INR',
-      receipt: `rcpt_${userId}_${Date.now()}`,
+      receipt: receipt,
       notes: {
         user_id: userId,
         purpose: 'Open House Platform Access Fee'
