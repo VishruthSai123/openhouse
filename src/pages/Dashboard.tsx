@@ -69,8 +69,8 @@ const Dashboard = () => {
 
       // Load stats
       const [ideasRes, projectsRes] = await Promise.all([
-        supabase.from('ideas').select('id', { count: 'exact' }).eq('creator_id', user.id),
-        supabase.from('projects').select('id', { count: 'exact' }).eq('creator_id', user.id),
+        supabase.from('ideas').select('*', { count: 'exact', head: true }).eq('user_id', user.id),
+        supabase.from('projects').select('*', { count: 'exact', head: true }).eq('creator_id', user.id),
       ]);
 
       setStats({

@@ -21,6 +21,16 @@ export type Database = {
           full_name: string | null
           id: string
           updated_at: string | null
+          avatar_url: string | null
+          bio: string | null
+          role: string | null
+          skills: string[] | null
+          interests: string[] | null
+          social_links: Json | null
+          onboarding_completed: boolean
+          has_paid: boolean
+          payment_date: string | null
+          builder_coins: number
         }
         Insert: {
           created_at?: string | null
@@ -28,6 +38,16 @@ export type Database = {
           full_name?: string | null
           id: string
           updated_at?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          role?: string | null
+          skills?: string[] | null
+          interests?: string[] | null
+          social_links?: Json | null
+          onboarding_completed?: boolean
+          has_paid?: boolean
+          payment_date?: string | null
+          builder_coins?: number
         }
         Update: {
           created_at?: string | null
@@ -35,8 +55,252 @@ export type Database = {
           full_name?: string | null
           id?: string
           updated_at?: string | null
+          avatar_url?: string | null
+          bio?: string | null
+          role?: string | null
+          skills?: string[] | null
+          interests?: string[] | null
+          social_links?: Json | null
+          onboarding_completed?: boolean
+          has_paid?: boolean
+          payment_date?: string | null
+          builder_coins?: number
         }
         Relationships: []
+      }
+      payments: {
+        Row: {
+          id: string
+          user_id: string
+          amount: number
+          currency: string
+          status: string
+          transaction_id: string | null
+          payment_method: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          amount: number
+          currency?: string
+          status?: string
+          transaction_id?: string | null
+          payment_method?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          amount?: number
+          currency?: string
+          status?: string
+          transaction_id?: string | null
+          payment_method?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      ideas: {
+        Row: {
+          id: string
+          user_id: string
+          title: string
+          description: string
+          category: string
+          stage: string
+          looking_for: string[] | null
+          upvotes: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          title: string
+          description: string
+          category: string
+          stage?: string
+          looking_for?: string[] | null
+          upvotes?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          title?: string
+          description?: string
+          category?: string
+          stage?: string
+          looking_for?: string[] | null
+          upvotes?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ideas_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      idea_comments: {
+        Row: {
+          id: string
+          idea_id: string
+          user_id: string
+          content: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          idea_id: string
+          user_id: string
+          content: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          idea_id?: string
+          user_id?: string
+          content?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_comments_idea_id_fkey"
+            columns: ["idea_id"]
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "idea_comments_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      idea_votes: {
+        Row: {
+          id: string
+          idea_id: string
+          user_id: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          idea_id: string
+          user_id: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          idea_id?: string
+          user_id?: string
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "idea_votes_idea_id_fkey"
+            columns: ["idea_id"]
+            referencedRelation: "ideas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "idea_votes_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      projects: {
+        Row: {
+          id: string
+          creator_id: string
+          name: string
+          description: string
+          status: string
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          creator_id: string
+          name: string
+          description: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          creator_id?: string
+          name?: string
+          description?: string
+          status?: string
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "projects_creator_id_fkey"
+            columns: ["creator_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      coin_transactions: {
+        Row: {
+          id: string
+          user_id: string
+          amount: number
+          reason: string
+          reference_type: string | null
+          reference_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          amount: number
+          reason: string
+          reference_type?: string | null
+          reference_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          amount?: number
+          reason?: string
+          reference_type?: string | null
+          reference_id?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coin_transactions_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
       }
     }
     Views: {

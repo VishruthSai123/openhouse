@@ -4,7 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Sparkles, Shield, Zap } from "lucide-react";
+import { Check, Sparkles, Shield, Zap, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 declare global {
   interface Window {
@@ -15,6 +18,7 @@ declare global {
 const Payment = () => {
   const [loading, setLoading] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(true);
+  const [isTestMode, setIsTestMode] = useState(import.meta.env.VITE_RAZORPAY_MODE === 'test');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -65,6 +69,27 @@ const Payment = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
+      // Get the appropriate Razorpay key based on mode
+      const razorpayKey = isTestMode 
+        ? import.meta.env.VITE_RAZORPAY_TEST_KEY_ID 
+        : import.meta.env.VITE_RAZORPAY_LIVE_KEY_ID;
+
+      if (!razorpayKey) {
+        throw new Error('Razorpay key not configured');
+      }
+
+      // Call edge function to create Razorpay order
+      const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
+        body: { 
+          amount: 100,
+          userId: user.id,
+          isTestMode 
+        }
+      });
+
+      if (orderError) throw orderError;
+      if (!orderData?.orderId) throw new Error('Failed to create order');
+
       // Create payment record
       const { data: payment, error: paymentError } = await supabase
         .from('payments')
@@ -73,6 +98,8 @@ const Payment = () => {
           amount: 100.00,
           currency: 'INR',
           payment_gateway: 'razorpay',
+          payment_method: isTestMode ? 'test' : 'live',
+          transaction_id: orderData.orderId,
           status: 'pending'
         })
         .select()
@@ -80,44 +107,62 @@ const Payment = () => {
 
       if (paymentError) throw paymentError;
 
+      // Get user profile for prefill
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .single();
+
       // Initialize Razorpay
       const options = {
-        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_key', // Replace with your Razorpay key
-        amount: 10000, // Amount in paise (₹100 = 10000 paise)
-        currency: 'INR',
+        key: razorpayKey,
+        amount: orderData.amount, // Amount from order
+        currency: orderData.currency,
         name: 'Open House',
         description: 'One-time Platform Access Fee',
-        image: '/logo.png',
-        order_id: '', // You should generate this from backend
+        order_id: orderData.orderId,
         handler: async function (response: any) {
-          // Payment successful
+          // Payment successful - verify on backend
           try {
-            const { error } = await supabase
-              .from('payments')
-              .update({
-                status: 'completed',
-                transaction_id: response.razorpay_payment_id
-              })
-              .eq('id', payment.id);
-
-            if (error) throw error;
-
-            toast({
-              title: "Payment Successful! 🎉",
-              description: "Welcome to Open House. Let's build something amazing!",
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-razorpay-payment', {
+              body: {
+                orderId: response.razorpay_order_id,
+                paymentId: response.razorpay_payment_id,
+                signature: response.razorpay_signature,
+                userId: user.id,
+                paymentRecordId: payment.id
+              }
             });
 
-            navigate('/home');
+            if (verifyError) throw verifyError;
+
+            if (verifyData?.verified) {
+              toast({
+                title: "Payment Successful! 🎉",
+                description: "Welcome to Open House. Let's build something amazing!",
+              });
+              
+              // Refresh the page to update payment status
+              window.location.href = '/home';
+            } else {
+              throw new Error('Payment verification failed');
+            }
           } catch (error: any) {
             toast({
-              title: "Error",
-              description: error.message,
+              title: "Verification Error",
+              description: error.message || "Payment verification failed. Please contact support.",
               variant: "destructive",
             });
           }
         },
         prefill: {
-          email: user.email,
+          name: profile?.full_name || '',
+          email: profile?.email || user.email,
+        },
+        notes: {
+          user_id: user.id,
+          payment_record_id: payment.id
         },
         theme: {
           color: '#9333ea'
@@ -128,27 +173,61 @@ const Payment = () => {
             // Update payment status to failed if dismissed
             supabase
               .from('payments')
-              .update({ status: 'failed' })
-              .eq('id', payment.id);
+              .update({ status: 'cancelled' })
+              .eq('id', payment.id)
+              .then(() => {
+                toast({
+                  title: "Payment Cancelled",
+                  description: "You can try again whenever you're ready.",
+                  variant: "default",
+                });
+              });
           }
         }
       };
 
       const razorpay = new window.Razorpay(options);
+      razorpay.on('payment.failed', function (response: any) {
+        // Update payment status to failed
+        supabase
+          .from('payments')
+          .update({ 
+            status: 'failed',
+            transaction_id: response.error.metadata?.payment_id || payment.transaction_id
+          })
+          .eq('id', payment.id);
+
+        toast({
+          title: "Payment Failed",
+          description: response.error.description || "Something went wrong. Please try again.",
+          variant: "destructive",
+        });
+        setLoading(false);
+      });
+
       razorpay.open();
     } catch (error: any) {
+      console.error('Payment error:', error);
       toast({
         title: "Payment Error",
-        description: error.message,
+        description: error.message || "Failed to initiate payment. Please try again.",
         variant: "destructive",
       });
-    } finally {
       setLoading(false);
     }
   };
 
   // Demo payment for testing (remove in production)
   const handleDemoPayment = async () => {
+    if (!isTestMode) {
+      toast({
+        title: "Demo Mode Only",
+        description: "Switch to test mode to use demo payment",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -162,6 +241,7 @@ const Payment = () => {
           amount: 100.00,
           currency: 'INR',
           payment_gateway: 'demo',
+          payment_method: 'test',
           transaction_id: `demo_${Date.now()}`,
           status: 'completed'
         });
@@ -218,6 +298,30 @@ const Payment = () => {
 
         <Card className="border-2 border-primary/20">
           <CardHeader className="text-center pb-4">
+            <div className="flex items-center justify-between mb-4">
+              <Badge variant={isTestMode ? "secondary" : "default"} className="text-xs">
+                {isTestMode ? "Test Mode" : "Live Mode"}
+              </Badge>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="test-mode" className="text-xs">Test</Label>
+                <Switch 
+                  id="test-mode"
+                  checked={!isTestMode} 
+                  onCheckedChange={(checked) => setIsTestMode(!checked)}
+                />
+                <Label htmlFor="test-mode" className="text-xs">Live</Label>
+              </div>
+            </div>
+            
+            {isTestMode && (
+              <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-2">
+                <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-left text-yellow-600 dark:text-yellow-400">
+                  You're in test mode. Use test card: 4111 1111 1111 1111 | Any future date | Any CVV
+                </p>
+              </div>
+            )}
+            
             <CardTitle className="text-2xl">Open House Access</CardTitle>
             <CardDescription>Lifetime membership for student founders</CardDescription>
             <div className="mt-6">
@@ -243,19 +347,20 @@ const Payment = () => {
                 onClick={handlePayment}
                 disabled={loading}
               >
-                {loading ? 'Processing...' : 'Pay ₹100 & Get Started'}
+                {loading ? 'Processing...' : `Pay ₹100 with Razorpay (${isTestMode ? 'Test' : 'Live'})`}
               </Button>
 
-              {/* Demo button - Remove in production */}
-              <Button 
-                variant="outline"
-                size="lg" 
-                className="w-full" 
-                onClick={handleDemoPayment}
-                disabled={loading}
-              >
-                Demo Payment (Testing Only)
-              </Button>
+              {isTestMode && (
+                <Button 
+                  variant="outline"
+                  size="lg" 
+                  className="w-full" 
+                  onClick={handleDemoPayment}
+                  disabled={loading}
+                >
+                  Quick Demo Payment (Test Mode Only)
+                </Button>
+              )}
             </div>
 
             <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground pt-2">
