@@ -232,27 +232,42 @@ export type Database = {
         Row: {
           id: string
           creator_id: string
-          name: string
+          title: string
           description: string
-          status: string
+          category: string
+          status: 'planning' | 'in_progress' | 'completed' | 'on_hold'
+          visibility: 'public' | 'private'
+          github_url: string | null
+          demo_url: string | null
+          tags: string[] | null
           created_at: string
           updated_at: string
         }
         Insert: {
           id?: string
           creator_id: string
-          name: string
+          title: string
           description: string
-          status?: string
+          category: string
+          status?: 'planning' | 'in_progress' | 'completed' | 'on_hold'
+          visibility?: 'public' | 'private'
+          github_url?: string | null
+          demo_url?: string | null
+          tags?: string[] | null
           created_at?: string
           updated_at?: string
         }
         Update: {
           id?: string
           creator_id?: string
-          name?: string
+          title?: string
           description?: string
-          status?: string
+          category?: string
+          status?: 'planning' | 'in_progress' | 'completed' | 'on_hold'
+          visibility?: 'public' | 'private'
+          github_url?: string | null
+          demo_url?: string | null
+          tags?: string[] | null
           created_at?: string
           updated_at?: string
         }
@@ -298,6 +313,178 @@ export type Database = {
             foreignKeyName: "coin_transactions_user_id_fkey"
             columns: ["user_id"]
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      connections: {
+        Row: {
+          id: string
+          sender_id: string
+          receiver_id: string
+          status: 'pending' | 'accepted' | 'rejected'
+          message: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          sender_id: string
+          receiver_id: string
+          status?: 'pending' | 'accepted' | 'rejected'
+          message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          sender_id?: string
+          receiver_id?: string
+          status?: 'pending' | 'accepted' | 'rejected'
+          message?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "connections_sender_id_fkey"
+            columns: ["sender_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "connections_receiver_id_fkey"
+            columns: ["receiver_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      project_members: {
+        Row: {
+          id: string
+          project_id: string
+          user_id: string
+          role: 'owner' | 'admin' | 'member'
+          joined_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          user_id: string
+          role: 'owner' | 'admin' | 'member'
+          joined_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          user_id?: string
+          role?: 'owner' | 'admin' | 'member'
+          joined_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_members_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_members_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      project_tasks: {
+        Row: {
+          id: string
+          project_id: string
+          title: string
+          description: string | null
+          assigned_to: string | null
+          status: 'todo' | 'in_progress' | 'done'
+          priority: 'low' | 'medium' | 'high'
+          due_date: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          title: string
+          description?: string | null
+          assigned_to?: string | null
+          status?: 'todo' | 'in_progress' | 'done'
+          priority?: 'low' | 'medium' | 'high'
+          due_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          title?: string
+          description?: string | null
+          assigned_to?: string | null
+          status?: 'todo' | 'in_progress' | 'done'
+          priority?: 'low' | 'medium' | 'high'
+          due_date?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_tasks_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "project_tasks_assigned_to_fkey"
+            columns: ["assigned_to"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      project_milestones: {
+        Row: {
+          id: string
+          project_id: string
+          title: string
+          description: string | null
+          target_date: string | null
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          project_id: string
+          title: string
+          description?: string | null
+          target_date?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          project_id?: string
+          title?: string
+          description?: string | null
+          target_date?: string | null
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_milestones_project_id_fkey"
+            columns: ["project_id"]
+            referencedRelation: "projects"
             referencedColumns: ["id"]
           }
         ]
