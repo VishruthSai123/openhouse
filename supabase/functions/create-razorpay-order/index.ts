@@ -1,5 +1,4 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -13,11 +12,53 @@ serve(async (req) => {
   }
 
   try {
-    const { amount, userId, isTestMode } = await req.json();
-
-    if (!amount || !userId) {
-      throw new Error('Missing required parameters');
+    console.log('=== Create Razorpay Order Request ===');
+    
+    // Parse request body
+    let body;
+    try {
+      body = await req.json();
+      console.log('Request body:', JSON.stringify(body));
+    } catch (parseError) {
+      console.error('JSON parse error:', parseError);
+      return new Response(
+        JSON.stringify({ 
+          error: 'Invalid request body',
+          details: 'Request must be valid JSON'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        },
+      );
     }
+
+    const { amount, userId, isTestMode } = body;
+
+    // Validate required parameters
+    if (!amount) {
+      console.error('Missing amount parameter');
+      return new Response(
+        JSON.stringify({ error: 'Missing required parameter: amount' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        },
+      );
+    }
+
+    if (!userId) {
+      console.error('Missing userId parameter');
+      return new Response(
+        JSON.stringify({ error: 'Missing required parameter: userId' }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        },
+      );
+    }
+
+    console.log(`Processing order for user: ${userId}, amount: ${amount}, mode: ${isTestMode ? 'test' : 'live'}`);
 
     // Get appropriate Razorpay credentials
     const keyId = isTestMode 
@@ -28,8 +69,22 @@ serve(async (req) => {
       ? Deno.env.get('RAZORPAY_TEST_KEY_SECRET')
       : Deno.env.get('RAZORPAY_LIVE_KEY_SECRET');
 
+    console.log(`Using ${isTestMode ? 'TEST' : 'LIVE'} credentials`);
+    console.log(`Key ID present: ${!!keyId}`);
+    console.log(`Key Secret present: ${!!keySecret}`);
+
     if (!keyId || !keySecret) {
-      throw new Error('Razorpay credentials not configured');
+      console.error('Razorpay credentials not configured in environment');
+      return new Response(
+        JSON.stringify({ 
+          error: 'Payment gateway not configured',
+          details: `Missing ${isTestMode ? 'test' : 'live'} mode credentials`
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 500,
+        },
+      );
     }
 
     // Create Razorpay order
@@ -43,8 +98,11 @@ serve(async (req) => {
       }
     };
 
+    console.log('Order data:', JSON.stringify(orderData));
+
     const authString = btoa(`${keyId}:${keySecret}`);
     
+    console.log('Calling Razorpay API...');
     const response = await fetch('https://api.razorpay.com/v1/orders', {
       method: 'POST',
       headers: {
@@ -54,15 +112,35 @@ serve(async (req) => {
       body: JSON.stringify(orderData)
     });
 
+    console.log('Razorpay API response status:', response.status);
+
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Razorpay API error: ${JSON.stringify(errorData)}`);
+      let errorData;
+      try {
+        errorData = await response.json();
+      } catch (e) {
+        errorData = { message: await response.text() };
+      }
+      console.error('Razorpay API error:', JSON.stringify(errorData));
+      return new Response(
+        JSON.stringify({ 
+          error: 'Payment gateway error',
+          details: errorData.error?.description || errorData.message || 'Failed to create order',
+          statusCode: response.status
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 400,
+        },
+      );
     }
 
     const order = await response.json();
+    console.log('Order created successfully:', order.id);
 
     return new Response(
       JSON.stringify({
+        success: true,
         orderId: order.id,
         amount: order.amount,
         currency: order.currency,
@@ -74,12 +152,17 @@ serve(async (req) => {
       },
     );
   } catch (error) {
-    console.error('Error creating Razorpay order:', error);
+    console.error('Unexpected error creating Razorpay order:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: 'Internal server error',
+        details: errorMessage,
+        timestamp: new Date().toISOString()
+      }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-        status: 400,
+        status: 500,
       },
     );
   }

@@ -79,6 +79,7 @@ const Payment = () => {
       }
 
       // Call edge function to create Razorpay order
+      console.log('Calling create-razorpay-order function...');
       const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
         body: { 
           amount: 100,
@@ -87,8 +88,20 @@ const Payment = () => {
         }
       });
 
-      if (orderError) throw orderError;
-      if (!orderData?.orderId) throw new Error('Failed to create order');
+      console.log('Edge function response:', { orderData, orderError });
+
+      if (orderError) {
+        console.error('Edge function error:', orderError);
+        throw new Error(orderError.message || 'Failed to create order');
+      }
+      
+      if (!orderData?.success) {
+        throw new Error(orderData?.error || 'Failed to create order');
+      }
+      
+      if (!orderData?.orderId) {
+        throw new Error('Order ID not received from server');
+      }
 
       // Create payment record
       const { data: payment, error: paymentError } = await supabase
@@ -98,7 +111,6 @@ const Payment = () => {
           amount: 100.00,
           currency: 'INR',
           payment_gateway: 'razorpay',
-          payment_method: isTestMode ? 'test' : 'live',
           transaction_id: orderData.orderId,
           status: 'pending'
         })
@@ -208,9 +220,29 @@ const Payment = () => {
       razorpay.open();
     } catch (error: any) {
       console.error('Payment error:', error);
+      
+      let errorMessage = "Failed to initiate payment. Please try again.";
+      let errorTitle = "Payment Error";
+      
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
+      // Check for specific error types
+      if (error.message?.includes('credentials') || error.message?.includes('configured')) {
+        errorTitle = "Configuration Error";
+        errorMessage = "Payment gateway is not properly configured. Please contact support.";
+      } else if (error.message?.includes('network') || error.message?.includes('fetch')) {
+        errorTitle = "Network Error";
+        errorMessage = "Please check your internet connection and try again.";
+      } else if (error.message?.includes('order')) {
+        errorTitle = "Order Creation Failed";
+        errorMessage = "Could not create payment order. Please try again.";
+      }
+      
       toast({
-        title: "Payment Error",
-        description: error.message || "Failed to initiate payment. Please try again.",
+        title: errorTitle,
+        description: errorMessage,
         variant: "destructive",
       });
       setLoading(false);
