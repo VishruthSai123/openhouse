@@ -67,6 +67,10 @@ const Projects = () => {
   const loadProjects = async () => {
     try {
       setLoading(true);
+      
+      // Get current user to show their projects regardless of visibility
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('projects')
         .select(`
@@ -74,7 +78,7 @@ const Projects = () => {
           profiles!projects_creator_id_fkey(full_name, avatar_url, role),
           project_members(id)
         `)
-        .eq('visibility', 'public')
+        .or(user ? `visibility.eq.public,creator_id.eq.${user.id}` : 'visibility.eq.public')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
