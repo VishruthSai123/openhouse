@@ -1,0 +1,198 @@
+Product Requirements Document (PRD)
+
+Product: Open House – Student Founder Platform
+Owner: Manjunath Meesala
+Date: 17-Oct-2025
+
+1. Purpose & Vision
+
+Purpose:
+Open House is a social-first platform for students and young creators to connect, collaborate, and launch startups. It solves the common problems student founders face: finding co-founders, accessing mentorship, building ideas into products, and discovering early-stage funding.
+
+Vision:
+“To create a global ecosystem where student founders and creators of all roles (idea generators, developers, designers, editors, marketers) can build real startups from dorm rooms to global scale.”
+
+2. Goals & Objectives
+
+Build a community-focused platform that encourages collaboration and mentorship.
+
+Enable students to join in any role (founder, developer, designer, editor, marketer, mentor).
+
+Provide tools to build startups: Idea Hub, Build Spaces, Pitch Deck templates, AI assistance.
+
+Introduce gamification & rewards (Builder Coins, Idea Battles, Seasons).
+
+Provide investor visibility & mentorship access.
+
+Maintain low entry barrier (₹100 entry fee) while keeping exclusivity.
+
+3. Target Audience
+
+College students (all years) interested in entrepreneurship
+
+Young creators with skills: coding, designing, editing, marketing
+
+Mentors & investors looking to discover early-stage talent
+
+Startups in ideation or early development stage
+
+4. User Roles & Permissions
+Role	Capabilities	Access
+Idea Creator / Founder	Post ideas, find team, participate in Idea Battles, track startup progress	Full
+Developer	Join projects, collaborate in Build Spaces, contribute to MVPs	Project-based
+Designer	Join projects, contribute UI/UX & branding	Project-based
+Editor / Content Creator	Join projects, create marketing content, promote ideas	Project-based
+Marketer / Growth	Join projects, run campaigns, track metrics	Project-based
+Mentor	Browse ideas/teams, mentor 1:1 or speed mentoring, provide feedback	Full (read/write limited)
+Investor	Browse startups & teams, book meetings, fund startups	Limited (read-only for public data)
+5. Core Features & Requirements
+5.1 Founder & Creator Profiles
+
+Showcase skills, roles, achievements, and projects
+
+Display startup journey, milestones & Builder Coins
+
+Public/Private visibility settings
+
+5.2 Idea Hub
+
+Post and share startup ideas
+
+AI-powered idea validation & suggestions
+
+Commenting, voting, and collaboration features
+
+5.3 Co-Founder & Team Match
+
+AI-powered matchmaking based on skills, goals, roles, and interests
+
+Notifications for matches & team invites
+
+5.4 Build Spaces
+
+Private workspaces per team/project
+
+Features: chat, task boards, roadmap builder, pitch deck templates
+
+Role-based task assignments & notifications
+
+5.5 Mentorship & Investor Access
+
+Mentor roulette for random weekly speed mentoring
+
+Book 1:1 sessions
+
+Verified investors can browse startups
+
+5.6 Gamification / Builder Coins
+
+Earn coins for contributions: coding, designing, editing, pitching, mentoring
+
+Leaderboards & unlockable perks (mentorship, tools, investor access)
+
+5.7 Founder Feed
+
+Distraction-free feed for team updates, achievements, launches
+
+Ability to share posts, media, and track interactions
+
+5.8 Idea Battle Arena
+
+Pitch ideas in short videos
+
+Community voting & AI scoring
+
+Top ideas highlighted to investors
+
+5.9 Startup Journey Tracker
+
+Track milestones: Idea → MVP → Launch → Growth
+
+Progress visualization for team & investors
+
+5.10 Founder Stage / Live Rooms
+
+Live audio/video pitch sessions
+
+AMA, hackathons, and live collaboration
+
+Investor Q&A sessions
+
+5.11 Startup Passport
+
+Digital resume for students: skills, roles, projects, achievements, badges
+
+Shareable externally
+
+5.12 Payment & Entry Fee
+
+One-time entry fee: ₹100
+
+Payment gateway integration (UPI, cards, wallets)
+
+Optional Open House Pro upgrade
+
+6. User Flow
+
+Step 1: Sign up → Select role → Build profile → Pay ₹100
+Step 2: Post ideas or join projects → Match with teammates
+Step 3: Work in Build Spaces → Track progress → Earn Builder Coins
+Step 4: Participate in Idea Battles, mentor sessions, live events
+Step 5: Pitch to investors → Launch startup → Add milestones to Startup Passport
+
+7. Technical Requirements
+
+Platform: Web-first, with mobile app (iOS & Android)
+
+Backend: Scalable cloud-based solution (Firebase / Node.js / PostgreSQL)
+
+AI Features:
+
+Co-Founder match AI
+
+Idea validation & pitch suggestions
+
+Real-time Collaboration: Chat, task boards, live rooms
+
+Gamification Engine: Builder Coins, Leaderboards, Rewards
+
+Payment Integration: Razorpay / Stripe / UPI wallets
+
+8. KPIs / Success Metrics
+
+Student signups (target: 10k in first 6 months)
+
+Active projects & collaborations
+
+Number of idea pitches & battles submitted
+
+Mentorship sessions booked & completed
+
+Startups launched within the platform
+
+Engagement: posts, votes, Builder Coins earned
+
+9. Roadmap (MVP → Full Launch)
+
+Phase 1 (MVP)
+
+Founder profiles, Idea Hub, Co-Founder Match, Build Spaces, Entry Fee integration
+
+Phase 2
+
+Mentorship & Investor Access, Gamification, Builder Coins
+
+Phase 3
+
+Idea Battle Arena, Startup Journey Tracker, Founder Stage Live Rooms
+
+Phase 4 (Scale)
+
+Startup Passport, AI Co-Founder Assistant, Open House Seasons, global expansion
+
+10. Risks & Mitigation
+Risk	Mitigation
+Low student adoption	Campus ambassador programs, viral campaigns
+Lack of mentor availability	Mentor incentives, AI guidance
+Payment failures	Multiple gateways, UPI + card + wallet support
+Early-stage quality control	Verified mentors, AI-assisted idea validation

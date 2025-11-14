@@ -67,10 +67,22 @@ const Auth = () => {
       
       // Only redirect on actual sign in events
       if (event === 'SIGNED_IN' && session) {
-        console.log('✅ Auth page - SIGNED_IN event with valid session, redirecting to /home');
+        console.log('✅ Auth page - SIGNED_IN event with valid session, checking onboarding status');
         isRedirecting = true;
+        
+        // Check if user has completed onboarding
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('id', session.user.id)
+          .single();
+        
         setTimeout(() => {
-          navigate("/home", { replace: true });
+          if (profile?.onboarding_completed) {
+            navigate("/home", { replace: true });
+          } else {
+            navigate("/onboarding", { replace: true });
+          }
         }, 100);
       }
     });
@@ -93,9 +105,20 @@ const Auth = () => {
       }
       
       if (session && mounted && !isRedirecting) {
-        console.log('✅ Auth page - Existing session found, redirecting to /home');
+        console.log('✅ Auth page - Existing session found, checking onboarding status');
+        
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('onboarding_completed')
+          .eq('id', session.user.id)
+          .single();
+        
         isRedirecting = true;
-        navigate("/home", { replace: true });
+        if (profile?.onboarding_completed) {
+          navigate("/home", { replace: true });
+        } else {
+          navigate("/onboarding", { replace: true });
+        }
       } else if (!session && retryCount < 3 && window.location.hash.includes('access_token')) {
         // If we have hash params but no session yet, retry (OAuth callback in progress)
         console.log('⏳ Auth page - Hash params present but no session, retrying...');
