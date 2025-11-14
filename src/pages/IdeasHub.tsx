@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, TrendingUp, Clock, ArrowUpCircle, MessageSquare } from 'lucide-react';
+import { Plus, Search, TrendingUp, Clock, ArrowUpCircle, MessageSquare, ArrowLeft, Lightbulb } from 'lucide-react';
 
 interface Idea {
   id: string;
@@ -218,37 +218,44 @@ const IdeasHub = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <div className="border-b">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold">💡 Idea Hub</h1>
-              <p className="text-muted-foreground mt-1">
-                Discover amazing startup ideas and connect with founders
-              </p>
-            </div>
-            <Button onClick={() => navigate('/ideas/new')} size="lg">
-              <Plus className="w-4 h-4 mr-2" />
-              Post Your Idea
-            </Button>
-          </div>
-
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
-            <Input
-              placeholder="Search ideas..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-            />
+      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
+        <div className="container flex h-16 items-center gap-4 px-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <Lightbulb className="w-6 h-6 text-primary" />
+            <h1 className="text-xl font-bold">Idea Hub</h1>
           </div>
         </div>
-      </div>
+      </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <p className="text-muted-foreground">
+              Discover amazing startup ideas and connect with founders
+            </p>
+          </div>
+          <Button onClick={() => navigate('/ideas/new')} size="lg">
+            <Plus className="w-4 h-4 mr-2" />
+            Post Your Idea
+          </Button>
+        </div>
+
+        {/* Search */}
+        <div className="relative">
+          <Search className="absolute left-3 top-3 w-4 h-4 text-muted-foreground" />
+          <Input
+            placeholder="Search ideas..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10"
+          />
+        </div>
+
         {/* Category Tabs */}
-        <Tabs defaultValue="all" className="mb-8" onValueChange={setSelectedCategory}>
+        <Tabs defaultValue="all" className="mb-8 mt-6" onValueChange={setSelectedCategory}>
           <TabsList className="flex-wrap h-auto">
             {categories.map(cat => (
               <TabsTrigger key={cat} value={cat} className="capitalize">
