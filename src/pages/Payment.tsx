@@ -80,6 +80,8 @@ const Payment = () => {
 
       // Call edge function to create Razorpay order
       console.log('Calling create-razorpay-order function...');
+      console.log('Request data:', { amount: 100, userId: user.id, isTestMode });
+      
       const { data: orderData, error: orderError } = await supabase.functions.invoke('create-razorpay-order', {
         body: { 
           amount: 100,
@@ -92,14 +94,23 @@ const Payment = () => {
 
       if (orderError) {
         console.error('Edge function error:', orderError);
-        throw new Error(orderError.message || 'Failed to create order');
+        // Try to get detailed error from the response
+        const errorContext = orderError.context || {};
+        const errorDetails = orderData?.error || orderData?.details || orderError.message;
+        console.error('Error details:', errorDetails);
+        console.error('Full error context:', errorContext);
+        throw new Error(errorDetails || 'Failed to create order');
       }
       
-      if (!orderData?.success) {
-        throw new Error(orderData?.error || 'Failed to create order');
+      // Check if response has error in body (400 with error message)
+      if (orderData && !orderData.success && orderData.error) {
+        const errorMsg = orderData.details || orderData.error;
+        console.error('Order creation failed:', errorMsg);
+        throw new Error(errorMsg);
       }
       
       if (!orderData?.orderId) {
+        console.error('No order ID in response:', orderData);
         throw new Error('Order ID not received from server');
       }
 
