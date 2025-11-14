@@ -14,6 +14,11 @@ import IdeasHub from "./pages/IdeasHub";
 import CreateIdea from "./pages/CreateIdea";
 import IdeaDetail from "./pages/IdeaDetail";
 import FindTeam from "./pages/FindTeam";
+import Projects from "./pages/Projects";
+import CreateProject from "./pages/CreateProject";
+import ProjectDetail from "./pages/ProjectDetail";
+import Leaderboard from "./pages/Leaderboard";
+import Mentorship from "./pages/Mentorship";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 const queryClient = new QueryClient();
@@ -35,6 +40,11 @@ const App = () => (
             <Route path="/ideas/new" element={<CreateIdea />} />
             <Route path="/ideas/:id" element={<IdeaDetail />} />
             <Route path="/find-team" element={<FindTeam />} />
+            <Route path="/projects" element={<Projects />} />
+            <Route path="/projects/new" element={<CreateProject />} />
+            <Route path="/projects/:id" element={<ProjectDetail />} />
+            <Route path="/leaderboard" element={<Leaderboard />} />
+            <Route path="/mentorship" element={<Mentorship />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>

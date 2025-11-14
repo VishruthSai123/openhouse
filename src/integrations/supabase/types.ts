@@ -489,6 +489,131 @@ export type Database = {
           }
         ]
       }
+      mentorship_sessions: {
+        Row: {
+          id: string
+          mentor_id: string
+          mentee_id: string
+          topic: string
+          description: string | null
+          scheduled_at: string | null
+          duration_minutes: number
+          status: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+          notes: string | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          mentor_id: string
+          mentee_id: string
+          topic: string
+          description?: string | null
+          scheduled_at?: string | null
+          duration_minutes?: number
+          status?: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          mentor_id?: string
+          mentee_id?: string
+          topic?: string
+          description?: string | null
+          scheduled_at?: string | null
+          duration_minutes?: number
+          status?: 'pending' | 'confirmed' | 'completed' | 'cancelled'
+          notes?: string | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "mentorship_sessions_mentor_id_fkey"
+            columns: ["mentor_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "mentorship_sessions_mentee_id_fkey"
+            columns: ["mentee_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
+      achievements: {
+        Row: {
+          id: string
+          name: string
+          description: string
+          icon: string | null
+          category: 'ideas' | 'projects' | 'social' | 'coins' | 'milestones'
+          requirement_type: 'count' | 'milestone'
+          requirement_value: number | null
+          coins_reward: number
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          name: string
+          description: string
+          icon?: string | null
+          category: 'ideas' | 'projects' | 'social' | 'coins' | 'milestones'
+          requirement_type: 'count' | 'milestone'
+          requirement_value?: number | null
+          coins_reward?: number
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          name?: string
+          description?: string
+          icon?: string | null
+          category?: 'ideas' | 'projects' | 'social' | 'coins' | 'milestones'
+          requirement_type?: 'count' | 'milestone'
+          requirement_value?: number | null
+          coins_reward?: number
+          created_at?: string
+        }
+        Relationships: []
+      }
+      achievement_unlocks: {
+        Row: {
+          id: string
+          user_id: string
+          achievement_id: string
+          unlocked_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          achievement_id: string
+          unlocked_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          achievement_id?: string
+          unlocked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "achievement_unlocks_user_id_fkey"
+            columns: ["user_id"]
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "achievement_unlocks_achievement_id_fkey"
+            columns: ["achievement_id"]
+            referencedRelation: "achievements"
+            referencedColumns: ["id"]
+          }
+        ]
+      }
     }
     Views: {
       [_ in never]: never

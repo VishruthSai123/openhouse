@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { formatDistanceToNow } from 'date-fns';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -34,6 +35,7 @@ interface Profile {
 const Dashboard = () => {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
   const [stats, setStats] = useState({
     ideasCount: 0,
     projectsCount: 0,
@@ -78,10 +80,89 @@ const Dashboard = () => {
         projectsCount: projectsRes.count || 0,
         connectionsCount: 0, // TODO: Implement connections
       });
+
+      // Load recent activity
+      await loadRecentActivity(user.id);
     } catch (error) {
       console.error('Error loading user data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadRecentActivity = async (userId: string) => {
+    try {
+      const activities: any[] = [];
+
+      // Get recent ideas
+      const { data: ideas } = await supabase
+        .from('ideas')
+        .select('id, title, created_at')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      ideas?.forEach(idea => {
+        activities.push({
+          icon: <Lightbulb className="w-4 h-4 text-yellow-500" />,
+          bgColor: 'bg-yellow-500/10',
+          title: 'Posted an Idea',
+          description: idea.title,
+          time: formatDistanceToNow(new Date(idea.created_at), { addSuffix: true }),
+          link: `/ideas/${idea.id}`,
+        });
+      });
+
+      // Get recent projects
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('id, title, created_at')
+        .eq('creator_id', userId)
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      projects?.forEach(project => {
+        activities.push({
+          icon: <Briefcase className="w-4 h-4 text-green-500" />,
+          bgColor: 'bg-green-500/10',
+          title: 'Created a Project',
+          description: project.title,
+          time: formatDistanceToNow(new Date(project.created_at), { addSuffix: true }),
+          link: `/projects/${project.id}`,
+        });
+      });
+
+      // Get recent connections
+      const { data: connections } = await supabase
+        .from('connections')
+        .select('id, created_at, sender_id, receiver_id, profiles!connections_receiver_id_fkey(full_name)')
+        .or(`sender_id.eq.${userId},receiver_id.eq.${userId}`)
+        .eq('status', 'accepted')
+        .order('created_at', { ascending: false })
+        .limit(3);
+
+      connections?.forEach(conn => {
+        const otherUser = conn.profiles as any;
+        activities.push({
+          icon: <Users className="w-4 h-4 text-blue-500" />,
+          bgColor: 'bg-blue-500/10',
+          title: 'New Connection',
+          description: `Connected with ${otherUser?.full_name || 'a builder'}`,
+          time: formatDistanceToNow(new Date(conn.created_at), { addSuffix: true }),
+          link: '/find-team',
+        });
+      });
+
+      // Sort all activities by time and take top 10
+      activities.sort((a, b) => {
+        const timeA = a.time.includes('ago') ? 1 : 0;
+        const timeB = b.time.includes('ago') ? 1 : 0;
+        return timeB - timeA;
+      });
+
+      setRecentActivity(activities.slice(0, 10));
+    } catch (error) {
+      console.error('Error loading recent activity:', error);
     }
   };
 
@@ -273,6 +354,20 @@ const Dashboard = () => {
               </div>
             </CardHeader>
           </Card>
+
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate('/leaderboard')}>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-yellow-500/10">
+                  <Trophy className="w-5 h-5 text-yellow-500" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">Leaderboard</CardTitle>
+                  <CardDescription>Check your ranking</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
         </div>
 
         {/* Recent Activity */}
@@ -282,11 +377,33 @@ const Dashboard = () => {
             <CardDescription>Stay updated with your latest actions</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-12 text-muted-foreground">
-              <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
-              <p>No recent activity yet</p>
-              <p className="text-sm">Start by posting an idea or joining a project!</p>
-            </div>
+            {recentActivity.length === 0 ? (
+              <div className="text-center py-12 text-muted-foreground">
+                <Calendar className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                <p>No recent activity yet</p>
+                <p className="text-sm">Start by posting an idea or joining a project!</p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {recentActivity.map((activity, index) => (
+                  <div key={index} className="flex items-start gap-4 pb-4 border-b last:border-0">
+                    <div className={`p-2 rounded-lg ${activity.bgColor}`}>
+                      {activity.icon}
+                    </div>
+                    <div className="flex-1">
+                      <p className="font-medium">{activity.title}</p>
+                      <p className="text-sm text-muted-foreground">{activity.description}</p>
+                      <p className="text-xs text-muted-foreground mt-1">{activity.time}</p>
+                    </div>
+                    {activity.link && (
+                      <Button variant="ghost" size="sm" onClick={() => navigate(activity.link)}>
+                        View
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </CardContent>
         </Card>
       </main>

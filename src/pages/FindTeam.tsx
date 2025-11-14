@@ -132,13 +132,13 @@ const FindTeam = () => {
         .from('connections')
         .select(`
           *,
-          sender:sender_id(id, email, full_name, role, bio, skills, interests, builder_coins),
-          receiver:receiver_id(id, email, full_name, role, bio, skills, interests, builder_coins)
+          sender:profiles!connections_sender_id_fkey(id, email, full_name, role, bio, skills, interests, builder_coins),
+          receiver:profiles!connections_receiver_id_fkey(id, email, full_name, role, bio, skills, interests, builder_coins)
         `)
         .or(`sender_id.eq.${user?.id},receiver_id.eq.${user?.id}`);
 
       if (error) throw error;
-      setConnections(data || []);
+      setConnections(data as any || []);
     } catch (error) {
       console.error('Error loading connections:', error);
     }
