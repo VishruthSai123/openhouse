@@ -24,6 +24,7 @@ import Messages from "./pages/Messages";
 import PostDetail from "./pages/PostDetail";
 import Connections from "./pages/Connections";
 import Profile from "./pages/Profile";
+import IdeaValidator from "./pages/IdeaValidator";
 import MobileBottomNav from "./components/MobileBottomNav";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -51,6 +52,7 @@ const App = () => (
             <Route path="/ideas" element={<IdeasHub />} />
             <Route path="/ideas/new" element={<CreateIdea />} />
             <Route path="/ideas/:id" element={<IdeaDetail />} />
+            <Route path="/idea-validator" element={<IdeaValidator />} />
             <Route path="/find-team" element={<FindTeam />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/new" element={<CreateProject />} />

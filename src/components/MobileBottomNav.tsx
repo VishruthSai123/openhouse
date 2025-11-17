@@ -1,12 +1,30 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Home, Lightbulb, Plus, Briefcase, Users } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const MobileBottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Check authentication status
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
 
   // Only show bottom nav on Feed and Dashboard pages
   const allowedPaths = ['/feed', '/dashboard', '/', '/home'];
@@ -33,8 +51,8 @@ const MobileBottomNav = () => {
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
 
-  // Don't render if not on allowed pages
-  if (!shouldShowNav) {
+  // Don't render if not authenticated or not on allowed pages
+  if (!isAuthenticated || !shouldShowNav) {
     return null;
   }
 

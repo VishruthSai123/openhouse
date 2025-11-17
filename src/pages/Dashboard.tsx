@@ -20,7 +20,8 @@ import {
   MessageSquare,
   Calendar,
   Moon,
-  Sun
+  Sun,
+  Brain
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 
@@ -405,6 +406,37 @@ const Dashboard = () => {
                 <div className="min-w-0">
                   <CardTitle className="text-sm sm:text-lg truncate">Leaderboard</CardTitle>
                   <CardDescription className="text-xs sm:text-sm">Check your ranking</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+        </div>
+
+        {/* AI & Learning Actions */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6 mb-6 sm:mb-8">
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate('/idea-validator')}>
+            <CardHeader className="p-3 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/10 flex-shrink-0">
+                  <Brain className="w-4 h-4 sm:w-5 sm:h-5 text-purple-500" />
+                </div>
+                <div className="min-w-0">
+                  <CardTitle className="text-sm sm:text-lg truncate">Validate Idea</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">AI-powered validation</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+          </Card>
+
+          <Card className="hover:border-primary/50 transition-colors cursor-pointer" onClick={() => navigate('/mentorship')}>
+            <CardHeader className="p-3 sm:p-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-orange-500/10 flex-shrink-0">
+                  <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5 text-orange-500" />
+                </div>
+                <div className="min-w-0">
+                  <CardTitle className="text-sm sm:text-lg truncate">Mentorship</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Get expert guidance</CardDescription>
                 </div>
               </div>
             </CardHeader>
