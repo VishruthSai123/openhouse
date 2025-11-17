@@ -65,6 +65,7 @@ const Feed = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
+  const [currentUserProfile, setCurrentUserProfile] = useState<{ full_name: string | null; avatar_url: string | null } | null>(null);
   const POSTS_PER_PAGE = 10;
   const [selectedPost, setSelectedPost] = useState<FeedPost | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -145,6 +146,17 @@ const Feed = () => {
     const { data: { user } } = await supabase.auth.getUser();
     if (user) {
       setCurrentUserId(user.id);
+      
+      // Load user profile
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, avatar_url')
+        .eq('id', user.id)
+        .single();
+      
+      if (profile) {
+        setCurrentUserProfile(profile);
+      }
     }
   };
 
@@ -617,6 +629,18 @@ const Feed = () => {
             >
               <LayoutDashboard className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
+            <Avatar 
+              className="w-10 h-10 sm:w-11 sm:h-11 cursor-pointer ring-2 ring-primary/20 hover:ring-primary/40 transition-all"
+              onClick={() => navigate(`/profile/${currentUserId}`)}
+            >
+              {currentUserProfile?.avatar_url ? (
+                <img src={currentUserProfile.avatar_url} alt="Profile" className="object-cover w-full h-full" />
+              ) : (
+                <AvatarFallback className="text-sm sm:text-base bg-primary/10">
+                  {currentUserProfile?.full_name?.charAt(0).toUpperCase() || 'U'}
+                </AvatarFallback>
+              )}
+            </Avatar>
           </div>
         </div>
       </header>
