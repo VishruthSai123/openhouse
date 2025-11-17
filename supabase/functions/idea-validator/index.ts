@@ -7,8 +7,38 @@ const corsHeaders = {
 };
 
 interface Message {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
+}
+
+// Summarize conversation for context (keep last few messages + summary)
+function buildConversationContext(messages: Message[], previousContext?: string): { messages: Message[], contextSummary: string } {
+  const MAX_CONTEXT_MESSAGES = 6; // Keep last 3 exchanges (6 messages)
+  
+  // If conversation is short, return all messages
+  if (messages.length <= MAX_CONTEXT_MESSAGES) {
+    return {
+      messages,
+      contextSummary: previousContext || ''
+    };
+  }
+  
+  // Keep the most recent messages
+  const recentMessages = messages.slice(-MAX_CONTEXT_MESSAGES);
+  
+  // Build context summary from older messages if needed
+  const olderMessages = messages.slice(0, -MAX_CONTEXT_MESSAGES);
+  let contextSummary = previousContext || '';
+  
+  if (olderMessages.length > 0 && !contextSummary) {
+    // Create a brief summary of older messages
+    contextSummary = `Previous conversation context: User discussed their startup idea and received validation feedback covering market analysis, competition, and viability.`;
+  }
+  
+  return {
+    messages: recentMessages,
+    contextSummary
+  };
 }
 
 // Search the web using Serper API
@@ -62,7 +92,11 @@ async function searchWeb(query: string): Promise<string> {
 }
 
 // Analyze idea with Gemini AI
-async function validateIdea(messages: Message[], ideaContext: string): Promise<string> {
+async function validateIdea(
+  messages: Message[], 
+  ideaContext: string,
+  conversationContext?: string
+): Promise<string> {
   const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
   
   if (!geminiApiKey) {
@@ -77,6 +111,7 @@ async function validateIdea(messages: Message[], ideaContext: string): Promise<s
 3. **Identify potential problems, competition, and opportunities**
 4. **Give actionable feedback** on viability, market fit, and execution
 5. **Be constructive but realistic** - point out red flags and strengths
+6. **Maintain conversation context** - remember what was discussed earlier and build upon it
 
 When analyzing ideas:
 - Research current market trends and competitors
@@ -85,15 +120,23 @@ When analyzing ideas:
 - Consider monetization strategies
 - Identify key risks and mitigation strategies
 - Suggest pivots or improvements if needed
+- Reference previous discussion points when relevant
 
 Be conversational, encouraging, but HONEST. If an idea has major flaws, explain them clearly with data.
 
+${conversationContext ? `\n--- Previous Conversation Context ---\n${conversationContext}\n` : ''}
 ${ideaContext}`;
+
+    // Build optimized conversation context
+    const { messages: contextMessages, contextSummary } = buildConversationContext(
+      messages,
+      conversationContext
+    );
 
     // Format messages for OpenAI-compatible format
     const formattedMessages = [
       { role: 'system', content: systemPrompt },
-      ...messages.map(msg => ({
+      ...contextMessages.map(msg => ({
         role: msg.role,
         content: msg.content
       }))
@@ -175,7 +218,7 @@ serve(async (req) => {
       );
     }
 
-    const { messages, ideaSummary } = await req.json();
+    const { messages, ideaSummary, sessionId, conversationContext } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
       return new Response(
@@ -194,6 +237,8 @@ serve(async (req) => {
     console.log('Processing request:', {
       messageCount: messages.length,
       ideaSummary: ideaSummary ? 'provided' : 'none',
+      sessionId: sessionId || 'new session',
+      hasContext: !!conversationContext,
       lastMessage: lastUserMessage.slice(0, 50) + '...'
     });
     
@@ -213,8 +258,8 @@ serve(async (req) => {
     }
     
     console.log('Starting AI validation...');
-    // Get AI validation with web context
-    const aiResponse = await validateIdea(messages, webContext);
+    // Get AI validation with web context and conversation context
+    const aiResponse = await validateIdea(messages, webContext, conversationContext);
     console.log('AI validation completed');
 
     return new Response(
