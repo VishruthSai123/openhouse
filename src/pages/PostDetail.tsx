@@ -19,6 +19,10 @@ import {
   Send,
   ArrowLeft,
   CheckCircle2,
+  ExternalLink,
+  Github,
+  Globe,
+  Monitor,
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -31,6 +35,7 @@ interface FeedPost {
   content: string;
   created_at: string;
   tags: string[] | null;
+  project_id?: string | null;
   profiles?: {
     id: string;
     full_name: string | null;
@@ -38,6 +43,16 @@ interface FeedPost {
     role: string | null;
     bio: string | null;
     skills: string[] | null;
+  };
+  projects?: {
+    id: string;
+    title: string;
+    description: string;
+    github_url: string | null;
+    demo_url: string | null;
+    status: string;
+    tags: string[] | null;
+    visibility: string;
   };
   upvotes: number;
   comments: number;
@@ -101,6 +116,16 @@ const PostDetail = () => {
             role,
             bio,
             skills
+          ),
+          projects (
+            id,
+            title,
+            description,
+            github_url,
+            demo_url,
+            status,
+            tags,
+            visibility
           )
         `)
         .eq('id', postId)
@@ -120,14 +145,17 @@ const PostDetail = () => {
           .select('id', { count: 'exact', head: true })
           .eq('post_id', postId),
         
-        supabase
-          .from('connections')
-          .select('sender_id, receiver_id')
-          .or(
-            `and(sender_id.eq.${currentUserId},receiver_id.eq.${postData.author_id}),and(receiver_id.eq.${currentUserId},sender_id.eq.${postData.author_id})`
-          )
-          .eq('status', 'accepted')
-          .single()
+        // Skip connection check if viewing own post
+        postData.author_id === currentUserId
+          ? Promise.resolve({ data: null, error: null })
+          : supabase
+              .from('connections')
+              .select('sender_id, receiver_id')
+              .or(
+                `and(sender_id.eq.${currentUserId},receiver_id.eq.${postData.author_id}),and(receiver_id.eq.${currentUserId},sender_id.eq.${postData.author_id})`
+              )
+              .eq('status', 'accepted')
+              .single()
       ]);
 
       const interactions = interactionsResult.data || [];
@@ -409,9 +437,13 @@ const PostDetail = () => {
                 className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 cursor-pointer"
                 onClick={() => navigate(`/profile/${post.author_id}`)}
               >
-                <AvatarFallback className="text-sm sm:text-base">
-                  {post.profiles?.full_name?.charAt(0).toUpperCase() || 'U'}
-                </AvatarFallback>
+                {post.profiles?.avatar_url ? (
+                  <img src={post.profiles.avatar_url} alt={post.profiles.full_name || 'User'} className="object-cover w-full h-full" />
+                ) : (
+                  <AvatarFallback className="text-sm sm:text-base">
+                    {post.profiles?.full_name?.charAt(0).toUpperCase() || 'U'}
+                  </AvatarFallback>
+                )}
               </Avatar>
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
@@ -470,6 +502,96 @@ const PostDetail = () => {
                     {tag}
                   </Badge>
                 ))}
+              </div>
+            )}
+
+            {/* Project Showcase - Only for project_update posts */}
+            {post.post_type === 'project_update' && post.projects && (
+              <div className="pt-4 border-t space-y-4">
+                <div className="bg-gradient-to-br from-primary/10 via-primary/5 to-background rounded-lg p-4 sm:p-5 border-2 border-primary/20">
+                  <div className="flex items-center gap-2 mb-3">
+                    <Briefcase className="w-5 h-5 text-primary" />
+                    <h3 className="font-bold text-base sm:text-lg">Project Details</h3>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <div>
+                      <h4 className="font-semibold text-sm sm:text-base">{post.projects.title}</h4>
+                      <p className="text-sm text-muted-foreground mt-1">{post.projects.description}</p>
+                    </div>
+
+                    {/* Project Status */}
+                    <div className="flex flex-wrap gap-2">
+                      <Badge 
+                        variant={post.projects.status === 'in_progress' ? 'default' : 'secondary'}
+                        className="text-xs capitalize"
+                      >
+                        {post.projects.status.replace('_', ' ')}
+                      </Badge>
+                    </div>
+
+                    {/* Project Tags */}
+                    {post.projects.tags && post.projects.tags.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5">
+                        {post.projects.tags.map((tag, idx) => (
+                          <Badge key={idx} variant="outline" className="text-xs">
+                            {tag}
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Project Links - Prominent Display */}
+                    {(post.projects.github_url || post.projects.demo_url) && (
+                      <div className="pt-3 space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          Project Links
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {post.projects.github_url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-9 flex-1 min-w-[140px] bg-background hover:bg-accent"
+                              onClick={() => window.open(post.projects!.github_url!, '_blank')}
+                            >
+                              <Github className="w-4 h-4 mr-2" />
+                              View Code
+                              <ExternalLink className="w-3 h-3 ml-auto" />
+                            </Button>
+                          )}
+                          {post.projects.demo_url && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="h-9 flex-1 min-w-[140px] bg-background hover:bg-accent"
+                              onClick={() => window.open(post.projects!.demo_url!, '_blank')}
+                            >
+                              <Monitor className="w-4 h-4 mr-2" />
+                              Live Demo
+                              <ExternalLink className="w-3 h-3 ml-auto" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Call to Action - Only for public projects or own projects */}
+                    {(post.projects.visibility === 'public' || post.author_id === currentUserId) && (
+                      <div className="pt-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          className="w-full h-9"
+                          onClick={() => navigate(`/projects/${post.projects!.id}`)}
+                        >
+                          <Briefcase className="w-4 h-4 mr-2" />
+                          View Full Project
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 

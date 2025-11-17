@@ -95,6 +95,98 @@ const Profile = () => {
       loadProfile();
       loadPosts();
       loadProjects();
+
+      // Set up real-time subscriptions
+      const postsChannel = supabase
+        .channel('profile-posts-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'feed_posts',
+            filter: `author_id=eq.${userId}`,
+          },
+          () => {
+            console.log('Posts updated, reloading...');
+            loadPosts();
+          }
+        )
+        .subscribe();
+
+      const projectsChannel = supabase
+        .channel('profile-projects-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'projects',
+          },
+          () => {
+            console.log('Projects updated, reloading...');
+            loadProjects();
+          }
+        )
+        .subscribe();
+
+      const membersChannel = supabase
+        .channel('profile-members-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'project_members',
+          },
+          () => {
+            console.log('Project members updated, reloading...');
+            loadProjects();
+          }
+        )
+        .subscribe();
+
+      // Subscribe to upvotes changes (interactions table)
+      const upvotesChannel = supabase
+        .channel('profile-interactions-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'feed_post_interactions',
+          },
+          () => {
+            console.log('Interactions updated, reloading posts...');
+            loadPosts();
+          }
+        )
+        .subscribe();
+
+      // Subscribe to comments changes
+      const commentsChannel = supabase
+        .channel('profile-comments-realtime')
+        .on(
+          'postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'feed_post_comments',
+          },
+          () => {
+            console.log('Comments updated, reloading posts...');
+            loadPosts();
+          }
+        )
+        .subscribe();
+
+      return () => {
+        supabase.removeChannel(postsChannel);
+        supabase.removeChannel(projectsChannel);
+        supabase.removeChannel(membersChannel);
+        supabase.removeChannel(upvotesChannel);
+        supabase.removeChannel(commentsChannel);
+      };
     }
   }, [userId, currentUserId]);
 
@@ -168,30 +260,44 @@ const Profile = () => {
 
   const loadPosts = async () => {
     try {
-      const { data, error } = await supabase
+      console.log('Loading posts for user:', userId);
+      
+      // Get all posts by this user
+      const { data: postsData, error: postsError } = await supabase
         .from('feed_posts')
-        .select(`
-          id,
-          post_type,
-          title,
-          content,
-          created_at,
-          tags,
-          feed_post_upvotes(count),
-          feed_post_comments(count)
-        `)
+        .select('id, post_type, title, content, created_at, tags')
         .eq('author_id', userId)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (postsError) throw postsError;
 
-      const postsData = data.map((post: any) => ({
-        ...post,
-        upvotes: post.feed_post_upvotes[0]?.count || 0,
-        comments: post.feed_post_comments[0]?.count || 0,
-      }));
+      console.log('Found posts:', postsData?.length || 0);
 
-      setPosts(postsData);
+      // Get upvotes and comments count for each post
+      const postsWithCounts = await Promise.all(
+        (postsData || []).map(async (post) => {
+          const [interactionsRes, commentsRes] = await Promise.all([
+            supabase
+              .from('feed_post_interactions')
+              .select('*', { count: 'exact', head: true })
+              .eq('post_id', post.id)
+              .eq('interaction_type', 'upvote'),
+            supabase
+              .from('feed_post_comments')
+              .select('*', { count: 'exact', head: true })
+              .eq('post_id', post.id),
+          ]);
+
+          return {
+            ...post,
+            upvotes: interactionsRes.count || 0,
+            comments: commentsRes.count || 0,
+          };
+        })
+      );
+
+      console.log('Posts with counts:', postsWithCounts);
+      setPosts(postsWithCounts);
     } catch (error) {
       console.error('Error loading posts:', error);
     }
@@ -199,25 +305,40 @@ const Profile = () => {
 
   const loadProjects = async () => {
     try {
-      // Get projects where user is creator (public only) or member (public only)
-      const { data, error } = await supabase
+      console.log('Loading projects for user:', userId);
+      
+      // Get all public projects
+      const { data: allProjects, error: projectsError } = await supabase
         .from('projects')
-        .select(`
-          *,
-          project_members!left(user_id, role)
-        `)
+        .select('*')
         .eq('visibility', 'public')
-        .or(`creator_id.eq.${userId},project_members.user_id.eq.${userId}`)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (projectsError) throw projectsError;
 
-      const projectsData = data.map((project: any) => ({
+      // Get project memberships for this user
+      const { data: memberships, error: membersError } = await supabase
+        .from('project_members')
+        .select('project_id, role')
+        .eq('user_id', userId);
+
+      if (membersError) throw membersError;
+
+      const memberProjectIds = new Set(memberships?.map(m => m.project_id) || []);
+      const memberRoles = new Map(memberships?.map(m => [m.project_id, m.role]) || []);
+
+      // Filter to only projects where user is creator or member
+      const userProjects = (allProjects || []).filter(project => 
+        project.creator_id === userId || memberProjectIds.has(project.id)
+      );
+
+      const projectsData = userProjects.map((project) => ({
         ...project,
         is_creator: project.creator_id === userId,
-        member_role: project.project_members?.find((m: any) => m.user_id === userId)?.role || null,
+        member_role: memberRoles.get(project.id) || null,
       }));
 
+      console.log('Found projects:', projectsData.length);
       setProjects(projectsData);
     } catch (error) {
       console.error('Error loading projects:', error);
@@ -406,7 +527,7 @@ const Profile = () => {
               {/* Avatar */}
               <Avatar className="w-24 h-24 sm:w-32 sm:h-32 text-2xl">
                 {profile.avatar_url ? (
-                  <img src={profile.avatar_url} alt={profile.full_name || 'Profile'} className="object-cover" />
+                  <img src={profile.avatar_url} alt={profile.full_name || 'Profile'} className="object-cover w-full h-full" />
                 ) : (
                   <AvatarFallback className="text-3xl">
                     {getInitials(profile.full_name)}

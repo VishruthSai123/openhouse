@@ -648,9 +648,13 @@ const Feed = () => {
                           navigate(`/profile/${post.author_id}`);
                         }}
                       >
-                        <AvatarFallback className="text-xs sm:text-sm">
-                          {post.profiles?.full_name?.charAt(0).toUpperCase() || 'U'}
-                        </AvatarFallback>
+                        {post.profiles?.avatar_url ? (
+                          <img src={post.profiles.avatar_url} alt={post.profiles.full_name || 'User'} className="object-cover w-full h-full" />
+                        ) : (
+                          <AvatarFallback className="text-xs sm:text-sm">
+                            {post.profiles?.full_name?.charAt(0).toUpperCase() || 'U'}
+                          </AvatarFallback>
+                        )}
                       </Avatar>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
