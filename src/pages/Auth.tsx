@@ -79,7 +79,7 @@ const Auth = () => {
         
         setTimeout(() => {
           if (profile?.onboarding_completed) {
-            navigate("/home", { replace: true });
+            navigate("/feed", { replace: true });
           } else {
             navigate("/onboarding", { replace: true });
           }

@@ -287,76 +287,28 @@ const Mentorship = () => {
                       )}
                       <Dialog>
                         <DialogTrigger asChild>
-                          <Button className="w-full h-9 sm:h-10 text-sm" onClick={() => setSelectedMentor(mentor)}>
+                          <Button className="w-full h-9 sm:h-10 text-sm">
                             <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-2" />
                             Book Session
                           </Button>
                         </DialogTrigger>
                         <DialogContent className="max-w-md mx-3 sm:mx-0">
                           <DialogHeader>
-                            <DialogTitle className="text-base sm:text-lg">Book Mentorship Session</DialogTitle>
-                            <DialogDescription className="text-xs sm:text-sm">
-                              Schedule a session with {mentor.full_name}
-                            </DialogDescription>
+                            <DialogTitle className="text-base sm:text-lg flex items-center gap-2">
+                              <GraduationCap className="w-5 h-5 text-primary" />
+                              Coming Soon
+                            </DialogTitle>
                           </DialogHeader>
-                          <div className="space-y-3 sm:space-y-4 mt-4">
-                            <div>
-                              <Label htmlFor="topic" className="text-sm">Topic *</Label>
-                              <Input
-                                id="topic"
-                                placeholder="What would you like to discuss?"
-                                value={bookingData.topic}
-                                onChange={(e) => setBookingData({ ...bookingData, topic: e.target.value })}
-                                className="h-9 sm:h-10 text-sm"
-                              />
+                          <div className="py-6 text-center">
+                            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/10 flex items-center justify-center">
+                              <Calendar className="w-8 h-8 text-primary" />
                             </div>
-                            <div>
-                              <Label htmlFor="description" className="text-sm">Description (Optional)</Label>
-                              <Textarea
-                                id="description"
-                                placeholder="Add more details about what you'd like to learn..."
-                                value={bookingData.description}
-                                onChange={(e) => setBookingData({ ...bookingData, description: e.target.value })}
-                                rows={3}
-                                className="text-sm"
-                              />
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                              <div>
-                                <Label htmlFor="date" className="text-sm">Date *</Label>
-                                <Input
-                                  id="date"
-                                  type="date"
-                                  value={bookingData.scheduledDate}
-                                  onChange={(e) => setBookingData({ ...bookingData, scheduledDate: e.target.value })}
-                                  min={new Date().toISOString().split('T')[0]}
-                                  className="h-9 sm:h-10 text-sm"
-                                />
-                              </div>
-                              <div>
-                                <Label htmlFor="time" className="text-sm">Time *</Label>
-                                <Input
-                                  id="time"
-                                  type="time"
-                                  value={bookingData.scheduledTime}
-                                  onChange={(e) => setBookingData({ ...bookingData, scheduledTime: e.target.value })}
-                                  className="h-9 sm:h-10 text-sm"
-                                />
-                              </div>
-                            </div>
-                            <Button 
-                              className="w-full h-9 sm:h-10 text-sm" 
-                              onClick={handleBookSession}
-                              disabled={submitting}
-                            >
-                              {submitting ? (
-                                <>
-                                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                                  Booking...
-                                </>
-                              ) : (
-                                'Request Session'
-                              )}
+                            <h3 className="text-lg font-semibold mb-2">Mentorship Feature Coming Soon</h3>
+                            <p className="text-sm text-muted-foreground mb-4">
+                              We're working hard to bring you an amazing mentorship experience. Stay tuned!
+                            </p>
+                            <Button variant="outline" className="w-full" onClick={() => {}}>
+                              Got it
                             </Button>
                           </div>
                         </DialogContent>

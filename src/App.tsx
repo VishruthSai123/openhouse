@@ -43,8 +43,8 @@ const App = () => (
             <Route path="/auth" element={<Auth />} />
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/payment" element={<Payment />} />
-            <Route path="/home" element={<Home />} />
-            <Route path="/dashboard" element={<Home />} />
+            <Route path="/home" element={<Feed />} />
+            <Route path="/dashboard" element={<Feed />} />
             <Route path="/feed" element={<Feed />} />
             <Route path="/feed/:postId" element={<PostDetail />} />
             <Route path="/messages" element={<Messages />} />

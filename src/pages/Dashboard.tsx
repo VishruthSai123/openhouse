@@ -228,7 +228,7 @@ const Dashboard = () => {
           <div className="flex items-center gap-2 sm:gap-6">
             <h1 className="text-xl sm:text-2xl font-bold">Open House</h1>
             <nav className="hidden lg:flex items-center gap-1">
-              <Button variant="ghost" size="sm" onClick={() => navigate('/home')}>
+              <Button variant="ghost" size="sm" onClick={() => navigate('/feed')}>
                 <Home className="w-5 h-5 mr-2" />
                 Home
               </Button>
@@ -236,17 +236,13 @@ const Dashboard = () => {
                 <Lightbulb className="w-5 h-5 mr-2" />
                 Ideas
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/find-team')}>
-                <Users className="w-5 h-5 mr-2" />
-                Find Team
-              </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate('/projects')}>
                 <Briefcase className="w-5 h-5 mr-2" />
                 Projects
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => navigate('/mentorship')}>
-                <GraduationCap className="w-5 h-5 mr-2" />
-                Mentorship
+              <Button variant="ghost" size="sm" onClick={() => navigate('/connections')}>
+                <Users className="w-5 h-5 mr-2" />
+                Connections
               </Button>
             </nav>
           </div>

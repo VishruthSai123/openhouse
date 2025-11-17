@@ -42,7 +42,7 @@ const Payment = () => {
         .single();
 
       if (profile?.has_paid) {
-        navigate('/home');
+        navigate('/feed');
         return;
       }
     } catch (error) {

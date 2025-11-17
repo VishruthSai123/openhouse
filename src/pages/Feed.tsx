@@ -631,7 +631,7 @@ const Feed = () => {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => navigate('/dashboard')}
+              onClick={() => navigate('/feed')}
               className="h-10 w-10 sm:h-11 sm:w-11"
             >
               <LayoutDashboard className="w-5 h-5 sm:w-6 sm:h-6" />

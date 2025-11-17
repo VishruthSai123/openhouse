@@ -29,9 +29,9 @@ const Header = () => {
           {isAuthenticated && <MessagesButton />}
           <Button 
             variant="outline" 
-            onClick={() => navigate(isAuthenticated ? "/home" : "/auth")}
+            onClick={() => navigate(isAuthenticated ? "/feed" : "/auth")}
           >
-            {isAuthenticated ? "Dashboard" : "Sign In"}
+            {isAuthenticated ? "Home" : "Sign In"}
           </Button>
         </div>
       </div>

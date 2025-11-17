@@ -27,7 +27,7 @@ const MobileBottomNav = () => {
   }, []);
 
   // Only show bottom nav on Feed and Dashboard pages
-  const allowedPaths = ['/feed', '/dashboard', '/', '/home'];
+  const allowedPaths = ['/feed', '/dashboard', '/', '/home', '/ideas', '/projects', '/connections'];
   const shouldShowNav = allowedPaths.some(path => 
     location.pathname === path || 
     (path === '/feed' && location.pathname === '/')

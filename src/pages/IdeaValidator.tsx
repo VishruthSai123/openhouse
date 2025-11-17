@@ -286,26 +286,13 @@ I'll research the market, analyze competition, and give you brutally honest feed
         </div>
       </header>
 
-      <main className="container px-3 sm:px-5 py-3 sm:py-4 max-w-5xl mx-auto pb-safe">
-        {/* Info Banner */}
-        <Card className="mb-3 sm:mb-4 border-primary/20 bg-gradient-to-r from-primary/5 to-primary/10">
-          <CardContent className="p-3 sm:p-4 flex items-start gap-2 sm:gap-3">
-            <CheckCircle2 className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0 mt-0.5" />
-            <div className="flex-1 min-w-0">
-              <p className="text-xs sm:text-sm font-medium">Real-time Market Research</p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground mt-0.5 sm:mt-1">
-                I search the web for latest data, competitors, and trends to give you honest, data-backed validation
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
+      <main className="flex flex-col h-[calc(100vh-56px)] sm:h-[calc(100vh-64px)] max-w-5xl mx-auto">
         {/* Chat Container */}
-        <Card className="shadow-xl border-border/50">
-          <CardContent className="p-0">
+        <Card className="flex-1 flex flex-col shadow-xl border-border/50 rounded-none sm:rounded-lg sm:m-3">
+          <CardContent className="flex-1 flex flex-col p-0 overflow-hidden">
             {/* Messages */}
-            <ScrollArea ref={scrollRef} className="h-[calc(100dvh-280px)] sm:h-[calc(100vh-320px)] min-h-[400px]">
-              <div className="space-y-3 sm:space-y-4 p-3 sm:p-6">
+            <ScrollArea ref={scrollRef} className="flex-1">
+              <div className="space-y-3 sm:space-y-4 p-3 sm:p-4">
                 {messages.map((message, index) => (
                   <div
                     key={index}
@@ -423,45 +410,26 @@ I'll research the market, analyze competition, and give you brutally honest feed
             )}
 
             {/* Input Area */}
-            <div className="border-t border-border/50 bg-background/50 backdrop-blur-sm p-3 sm:p-4">
+            <div className="border-t border-border/50 bg-background/95 backdrop-blur-xl p-3 sm:p-4 flex-shrink-0">
               <div className="flex gap-2">
                 <Textarea
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyPress}
                   placeholder="Describe your idea or ask a question..."
-                  className="min-h-[52px] sm:min-h-[60px] max-h-32 resize-none text-xs sm:text-sm bg-background/80 border-border/50 focus:border-primary/50 transition-colors"
+                  className="min-h-[44px] max-h-32 resize-none text-xs sm:text-sm bg-background border-border/50 focus:border-primary/50 transition-colors"
                   disabled={loading}
                 />
                 <Button
                   onClick={handleSend}
                   disabled={!input.trim() || loading}
                   size="icon"
-                  className="h-[52px] w-[52px] sm:h-[60px] sm:w-[60px] flex-shrink-0 bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-primary/25"
+                  className="h-[44px] w-[44px] flex-shrink-0 bg-gradient-to-br from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70 transition-all shadow-lg hover:shadow-primary/25"
                 >
-                  <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                  <Send className="w-4 h-4" />
                 </Button>
               </div>
-              <p className="text-[10px] sm:text-xs text-muted-foreground mt-2 text-center">
-                Press Enter to send, Shift+Enter for new line
-              </p>
             </div>
-          </CardContent>
-        </Card>
-
-        {/* Tips */}
-        <Card className="bg-muted/30 border-border/50 backdrop-blur-sm">
-          <CardContent className="p-3 sm:p-4">
-            <p className="text-xs sm:text-sm font-medium mb-2 flex items-center gap-1.5">
-              <Lightbulb className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
-              Tips for better validation:
-            </p>
-            <ul className="text-[10px] sm:text-xs text-muted-foreground space-y-1">
-              <li>• Be specific about your target market and problem</li>
-              <li>• Share your unique value proposition</li>
-              <li>• Ask about competition and market trends</li>
-              <li>• Don't be afraid of honest feedback!</li>
-            </ul>
           </CardContent>
         </Card>
       </main>

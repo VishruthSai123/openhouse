@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, TrendingUp, Clock, ArrowUpCircle, MessageSquare, ArrowLeft, Lightbulb } from 'lucide-react';
+import { Plus, Search, TrendingUp, Clock, ArrowUpCircle, MessageSquare, ArrowLeft, Lightbulb, Home } from 'lucide-react';
 
 interface Idea {
   id: string;
@@ -220,7 +220,8 @@ const IdeasHub = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
         <div className="container flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4">
-          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={() => navigate('/dashboard')}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={() => navigate('/feed')}>
+            <Home className="w-5 h-5" />
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <div className="flex items-center gap-2">
