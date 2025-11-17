@@ -8,6 +8,13 @@ const MobileBottomNav = () => {
   const [isVisible, setIsVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
+  // Only show bottom nav on Feed and Dashboard pages
+  const allowedPaths = ['/feed', '/dashboard', '/', '/home'];
+  const shouldShowNav = allowedPaths.some(path => 
+    location.pathname === path || 
+    (path === '/feed' && location.pathname === '/')
+  );
+
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
@@ -25,6 +32,11 @@ const MobileBottomNav = () => {
     
     return () => window.removeEventListener('scroll', handleScroll);
   }, [lastScrollY]);
+
+  // Don't render if not on allowed pages
+  if (!shouldShowNav) {
+    return null;
+  }
 
   const navItems = [
     {

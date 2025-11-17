@@ -219,28 +219,28 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background">
       {/* Top Navigation */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="container flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4">
+        <div className="container flex h-16 sm:h-18 items-center justify-between px-4 sm:px-5">
           <div className="flex items-center gap-2 sm:gap-6">
-            <h1 className="text-base sm:text-xl font-bold">Open House</h1>
+            <h1 className="text-xl sm:text-2xl font-bold">Open House</h1>
             <nav className="hidden lg:flex items-center gap-1">
               <Button variant="ghost" size="sm" onClick={() => navigate('/home')}>
-                <Home className="w-4 h-4 mr-2" />
+                <Home className="w-5 h-5 mr-2" />
                 Home
               </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate('/ideas')}>
-                <Lightbulb className="w-4 h-4 mr-2" />
+                <Lightbulb className="w-5 h-5 mr-2" />
                 Ideas
               </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate('/find-team')}>
-                <Users className="w-4 h-4 mr-2" />
+                <Users className="w-5 h-5 mr-2" />
                 Find Team
               </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate('/projects')}>
-                <Briefcase className="w-4 h-4 mr-2" />
+                <Briefcase className="w-5 h-5 mr-2" />
                 Projects
               </Button>
               <Button variant="ghost" size="sm" onClick={() => navigate('/mentorship')}>
-                <GraduationCap className="w-4 h-4 mr-2" />
+                <GraduationCap className="w-5 h-5 mr-2" />
                 Mentorship
               </Button>
             </nav>
@@ -248,11 +248,11 @@ const Dashboard = () => {
           
           <div className="flex items-center gap-1 sm:gap-3">
             <Button variant="ghost" size="sm" className="gap-1 sm:gap-2 px-2 sm:px-3">
-              <Coins className="w-3 h-3 sm:w-4 sm:h-4 text-yellow-500" />
+              <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
               <span className="font-semibold text-xs sm:text-sm">{profile?.builder_coins || 0}</span>
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={handleLogout}>
-              <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
+            <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-11 sm:w-11" onClick={handleLogout}>
+              <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </div>
         </div>

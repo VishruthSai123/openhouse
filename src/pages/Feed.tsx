@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -44,6 +43,8 @@ interface FeedPost {
   is_upvoted: boolean;
   is_saved: boolean;
   is_connected: boolean;
+  connection_status?: 'none' | 'pending' | 'accepted';
+  engagement_score?: number;
 }
 
 interface Comment {
@@ -57,10 +58,14 @@ interface Comment {
 }
 
 const Feed = () => {
-  const [posts, setPosts] = useState<FeedPost[]>([]);
-  const [activeTab, setActiveTab] = useState<'for-you' | 'following'>('for-you');
+  const [allPosts, setAllPosts] = useState<FeedPost[]>([]);
+  const [displayedPosts, setDisplayedPosts] = useState<FeedPost[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasMore, setHasMore] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
+  const POSTS_PER_PAGE = 10;
   const [selectedPost, setSelectedPost] = useState<FeedPost | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
@@ -134,7 +139,7 @@ const Feed = () => {
         supabase.removeChannel(interactionsChannel);
       };
     }
-  }, [currentUserId, activeTab]);
+  }, [currentUserId]);
 
   const loadCurrentUser = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -147,8 +152,8 @@ const Feed = () => {
     try {
       setLoading(true);
 
-      // Build query based on tab
-      let query = supabase
+      // Fetch more posts for randomization (50 instead of 20)
+      const { data: postsData, error: postsError } = await supabase
         .from('feed_posts')
         .select(`
           *,
@@ -160,29 +165,12 @@ const Feed = () => {
           )
         `)
         .order('created_at', { ascending: false })
-        .limit(20);
-
-      // For "Following" tab, filter by followed users
-      if (activeTab === 'following') {
-        const { data: following } = await supabase
-          .from('user_follows')
-          .select('following_id')
-          .eq('follower_id', currentUserId);
-
-        const followingIds = following?.map((f) => f.following_id) || [];
-        if (followingIds.length === 0) {
-          setPosts([]);
-          setLoading(false);
-          return;
-        }
-        query = query.in('author_id', followingIds);
-      }
-
-      const { data: postsData, error: postsError } = await query;
+        .limit(50);
       if (postsError) throw postsError;
 
       if (!postsData || postsData.length === 0) {
-        setPosts([]);
+        setAllPosts([]);
+        setDisplayedPosts([]);
         setLoading(false);
         return;
       }
@@ -190,8 +178,21 @@ const Feed = () => {
       const postIds = postsData.map((p) => p.id);
       const authorIds = postsData.map((p) => p.author_id);
 
+      // Get user's connections (followers)
+      const { data: followingData } = await supabase
+        .from('connections')
+        .select('receiver_id, sender_id')
+        .or(`sender_id.eq.${currentUserId},receiver_id.eq.${currentUserId}`)
+        .eq('status', 'accepted');
+
+      const followingIds = new Set(
+        followingData?.map(c => 
+          c.sender_id === currentUserId ? c.receiver_id : c.sender_id
+        ) || []
+      );
+
       // Fetch all related data in parallel
-      const [interactionsResult, commentsResult, connectionsResult] = await Promise.all([
+      const [interactionsResult, commentsResult, connectionsResult, pendingConnectionsResult] = await Promise.all([
         supabase
           .from('feed_post_interactions')
           .select('post_id, interaction_type, user_id')
@@ -204,16 +205,24 @@ const Feed = () => {
         
         supabase
           .from('connections')
-          .select('sender_id, receiver_id')
+          .select('sender_id, receiver_id, status')
           .or(
             `and(sender_id.eq.${currentUserId},receiver_id.in.(${authorIds.join(',')})),and(receiver_id.eq.${currentUserId},sender_id.in.(${authorIds.join(',')}))`
           )
-          .eq('status', 'accepted')
+          .eq('status', 'accepted'),
+        
+        supabase
+          .from('connections')
+          .select('sender_id, receiver_id, status')
+          .eq('sender_id', currentUserId)
+          .in('receiver_id', authorIds)
+          .eq('status', 'pending')
       ]);
 
       const interactions = interactionsResult.data || [];
       const comments = commentsResult.data || [];
       const connections = connectionsResult.data || [];
+      const pendingConnections = pendingConnectionsResult.data || [];
 
       // Create lookup maps for better performance
       const upvotesMap = new Map<string, number>();
@@ -221,6 +230,7 @@ const Feed = () => {
       const userSavesSet = new Set<string>();
       const commentsMap = new Map<string, number>();
       const connectedUsersSet = new Set<string>();
+      const pendingConnectionsSet = new Set<string>();
 
       // Build upvotes map
       interactions.forEach((i) => {
@@ -248,17 +258,58 @@ const Feed = () => {
         }
       });
 
-      // Enrich posts with interaction data
-      const enrichedPosts: FeedPost[] = postsData.map((post) => ({
-        ...post,
-        upvotes: upvotesMap.get(post.id) || 0,
-        comments: commentsMap.get(post.id) || 0,
-        is_upvoted: userUpvotesSet.has(post.id),
-        is_saved: userSavesSet.has(post.id),
-        is_connected: post.author_id === currentUserId || connectedUsersSet.has(post.author_id),
-      }));
+      // Build pending connections set
+      pendingConnections.forEach((c) => {
+        pendingConnectionsSet.add(c.receiver_id);
+      });
 
-      setPosts(enrichedPosts);
+      // Enrich posts with interaction data and engagement score
+      const enrichedPosts: FeedPost[] = postsData.map((post) => {
+        const upvoteCount = upvotesMap.get(post.id) || 0;
+        const commentCount = commentsMap.get(post.id) || 0;
+        const isConnected = post.author_id === currentUserId || connectedUsersSet.has(post.author_id);
+        const isPending = pendingConnectionsSet.has(post.author_id);
+        const isFromFollowing = followingIds.has(post.author_id);
+        const postAge = Date.now() - new Date(post.created_at).getTime();
+        const hoursSincePost = postAge / (1000 * 60 * 60);
+
+        // Calculate engagement score with varied weights
+        let engagementScore = 0;
+        engagementScore += upvoteCount * 3; // Upvotes weighted
+        engagementScore += commentCount * 5; // Comments weighted more
+        engagementScore += isFromFollowing ? 20 : 0; // Boost posts from connections
+        engagementScore -= hoursSincePost * 0.5; // Decay over time
+        engagementScore += Math.random() * 15; // Random factor for variety
+
+        return {
+          ...post,
+          upvotes: upvoteCount,
+          comments: commentCount,
+          is_upvoted: userUpvotesSet.has(post.id),
+          is_saved: userSavesSet.has(post.id),
+          is_connected: isConnected,
+          connection_status: isConnected ? 'accepted' : (isPending ? 'pending' : 'none'),
+          engagement_score: engagementScore,
+        };
+      });
+
+      // Sort by engagement score and take top 20
+      const sortedPosts = enrichedPosts.sort((a, b) => 
+        (b.engagement_score || 0) - (a.engagement_score || 0)
+      ).slice(0, 20);
+
+      // Add slight shuffle to top posts for variety
+      const finalPosts = sortedPosts.sort((a, b) => {
+        const scoreA = (a.engagement_score || 0) + Math.random() * 5;
+        const scoreB = (b.engagement_score || 0) + Math.random() * 5;
+        return scoreB - scoreA;
+      });
+
+      // Store all posts and display first page
+      setAllPosts(finalPosts);
+      setDisplayedPosts(finalPosts.slice(0, POSTS_PER_PAGE));
+      setCurrentPage(1);
+      setHasMore(finalPosts.length > POSTS_PER_PAGE);
     } catch (error: any) {
       console.error('Load posts error:', error);
       toast({
@@ -271,14 +322,31 @@ const Feed = () => {
     }
   };
 
+  const loadMore = () => {
+    setLoadingMore(true);
+    
+    // Simulate slight delay for better UX
+    setTimeout(() => {
+      const nextPage = currentPage + 1;
+      const startIndex = currentPage * POSTS_PER_PAGE;
+      const endIndex = startIndex + POSTS_PER_PAGE;
+      const nextPosts = allPosts.slice(startIndex, endIndex);
+      
+      setDisplayedPosts(prev => [...prev, ...nextPosts]);
+      setCurrentPage(nextPage);
+      setHasMore(endIndex < allPosts.length);
+      setLoadingMore(false);
+    }, 300);
+  };
+
   const handleInteraction = async (postId: string, type: 'upvote' | 'save') => {
-    const post = posts.find((p) => p.id === postId);
+    const post = displayedPosts.find((p) => p.id === postId);
     if (!post) return;
 
     const isCurrentlyActive = type === 'upvote' ? post.is_upvoted : post.is_saved;
 
     // Optimistic UI update
-    setPosts(prevPosts =>
+    setDisplayedPosts(prevPosts =>
       prevPosts.map(p => {
         if (p.id !== postId) return p;
         if (type === 'upvote') {
@@ -312,7 +380,7 @@ const Feed = () => {
       }
     } catch (error: any) {
       // Revert on error
-      setPosts(prevPosts =>
+      setDisplayedPosts(prevPosts =>
         prevPosts.map(p => {
           if (p.id !== postId) return p;
           if (type === 'upvote') {
@@ -336,6 +404,15 @@ const Feed = () => {
   };
 
   const handleConnect = async (userId: string) => {
+    // Optimistic UI update
+    setDisplayedPosts(prevPosts =>
+      prevPosts.map(p =>
+        p.author_id === userId
+          ? { ...p, connection_status: 'pending' as const }
+          : p
+      )
+    );
+
     try {
       await supabase.from('connections').insert({
         sender_id: currentUserId,
@@ -347,9 +424,16 @@ const Feed = () => {
         title: 'Success',
         description: 'Connection request sent!',
       });
-
-      loadPosts();
     } catch (error: any) {
+      // Revert on error
+      setDisplayedPosts(prevPosts =>
+        prevPosts.map(p =>
+          p.author_id === userId
+            ? { ...p, connection_status: 'none' as const }
+            : p
+        )
+      );
+      
       toast({
         title: 'Error',
         description: error.message,
@@ -399,7 +483,7 @@ const Feed = () => {
 
     // Optimistic UI update
     setComments(prev => [...prev, tempComment]);
-    setPosts(prevPosts =>
+    setDisplayedPosts(prevPosts =>
       prevPosts.map(p =>
         p.id === selectedPost.id ? { ...p, comments: p.comments + 1 } : p
       )
@@ -422,7 +506,7 @@ const Feed = () => {
     } catch (error: any) {
       // Revert on error
       setComments(prev => prev.filter(c => c.id !== tempComment.id));
-      setPosts(prevPosts =>
+      setDisplayedPosts(prevPosts =>
         prevPosts.map(p =>
           p.id === selectedPost.id ? { ...p, comments: p.comments - 1 } : p
         )
@@ -514,53 +598,42 @@ const Feed = () => {
     <div className="min-h-screen bg-background pb-16 md:pb-0">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container flex h-14 sm:h-16 items-center justify-between px-3 sm:px-4">
-          <h1 className="text-lg sm:text-xl font-bold">Home Feed</h1>
+        <div className="container flex h-16 sm:h-18 items-center justify-between px-4 sm:px-5">
+          <h1 className="text-xl sm:text-2xl font-bold">Home Feed</h1>
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate('/messages')}
-              className="h-8 w-8 sm:h-9 sm:w-9"
+              className="h-10 w-10 sm:h-11 sm:w-11"
             >
-              <Mail className="w-4 h-4 sm:w-5 sm:h-5" />
+              <Mail className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
               onClick={() => navigate('/dashboard')}
-              className="h-8 w-8 sm:h-9 sm:w-9"
+              className="h-10 w-10 sm:h-11 sm:w-11"
             >
-              <LayoutDashboard className="w-4 h-4 sm:w-5 sm:h-5" />
+              <LayoutDashboard className="w-5 h-5 sm:w-6 sm:h-6" />
             </Button>
           </div>
         </div>
       </header>
 
       <main className="container px-3 sm:px-4 py-4 sm:py-6 max-w-3xl mx-auto">
-        <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as any)} className="space-y-4">
-          <TabsList className="grid w-full grid-cols-2 h-9 sm:h-10">
-            <TabsTrigger value="for-you" className="text-xs sm:text-sm">
-              For You
-            </TabsTrigger>
-            <TabsTrigger value="following" className="text-xs sm:text-sm">
-              Following
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value={activeTab} className="space-y-4">
-            {posts.length === 0 ? (
-              <Card>
-                <CardContent className="py-12 text-center">
-                  <p className="text-muted-foreground">
-                    {activeTab === 'following'
-                      ? 'Follow people to see their posts here'
-                      : 'No posts yet. Be the first to share something!'}
-                  </p>
-                </CardContent>
-              </Card>
-            ) : (
-              posts.map((post) => (
+        <div className="space-y-4">
+          {displayedPosts.length === 0 && !loading ? (
+            <Card>
+              <CardContent className="py-12 text-center">
+                <p className="text-muted-foreground">
+                  No posts yet. Be the first to share something!
+                </p>
+              </CardContent>
+            </Card>
+          ) : (
+            <>
+              {displayedPosts.map((post) => (
                 <Card 
                   key={post.id} 
                   className="cursor-pointer hover:shadow-md transition-shadow"
@@ -588,11 +661,17 @@ const Feed = () => {
                             <Button
                               size="sm"
                               variant="outline"
-                              onClick={() => handleConnect(post.author_id)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (post.connection_status !== 'pending') {
+                                  handleConnect(post.author_id);
+                                }
+                              }}
+                              disabled={post.connection_status === 'pending'}
                               className="h-7 text-xs flex-shrink-0"
                             >
                               <UserPlus className="w-3 h-3 mr-1" />
-                              Connect
+                              {post.connection_status === 'pending' ? 'Request Sent' : 'Connect'}
                             </Button>
                           )}
                         </div>
@@ -740,10 +819,33 @@ const Feed = () => {
                     </div>
                   </CardContent>
                 </Card>
-              ))
+              ))}
+              
+              {/* Load More Button */}
+              {hasMore && (
+                <Card className="mt-4">
+                  <CardContent className="py-6 text-center">
+                    <Button
+                      onClick={loadMore}
+                      disabled={loadingMore}
+                      variant="outline"
+                      className="w-full sm:w-auto px-8"
+                    >
+                      {loadingMore ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-2 border-primary border-t-transparent mr-2" />
+                          Loading...
+                        </>
+                      ) : (
+                        'Load More'
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </>
             )}
-          </TabsContent>
-        </Tabs>
+        </div>
       </main>
     </div>
   );

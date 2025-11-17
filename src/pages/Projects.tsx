@@ -8,6 +8,16 @@ import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import {
   ArrowLeft,
@@ -22,6 +32,7 @@ import {
   Lock,
   Github,
   ExternalLink,
+  LogOut,
 } from 'lucide-react';
 
 interface Project {
@@ -41,7 +52,7 @@ interface Project {
     avatar_url: string | null;
     role: string | null;
   };
-  project_members?: { id: string }[];
+  project_members?: { id: string; user_id: string }[];
 }
 
 const Projects = () => {
@@ -51,12 +62,22 @@ const Projects = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [exitingProject, setExitingProject] = useState<{ id: string; title: string } | null>(null);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const categories = ['SaaS', 'E-commerce', 'EdTech', 'HealthTech', 'FinTech', 'Social', 'Gaming', 'AI/ML', 'Other'];
 
   useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        setCurrentUserId(user.id);
+      }
+    };
+
+    fetchUser();
     loadProjects();
 
     // Set up real-time subscription for projects
@@ -76,8 +97,26 @@ const Projects = () => {
       )
       .subscribe();
 
+    // Set up real-time subscription for project_members
+    const membersChannel = supabase
+      .channel('project-members-updates')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'project_members',
+        },
+        () => {
+          // Reload projects when memberships change
+          loadProjects();
+        }
+      )
+      .subscribe();
+
     return () => {
       supabase.removeChannel(channel);
+      supabase.removeChannel(membersChannel);
     };
   }, []);
 
@@ -89,21 +128,78 @@ const Projects = () => {
     try {
       setLoading(true);
       
-      // Get current user to show their projects regardless of visibility
+      // Get current user
       const { data: { user } } = await supabase.auth.getUser();
       
-      const { data, error } = await supabase
+      if (!user) {
+        // Guest - only show public projects
+        const { data, error } = await supabase
+          .from('projects')
+          .select(`
+            *,
+            profiles!projects_creator_id_fkey(full_name, avatar_url, role),
+            project_members(id, user_id)
+          `)
+          .eq('visibility', 'public')
+          .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        setProjects(data as any || []);
+        return;
+      }
+
+      // Get projects where user is owner
+      const { data: ownedProjects, error: ownedError } = await supabase
         .from('projects')
         .select(`
           *,
           profiles!projects_creator_id_fkey(full_name, avatar_url, role),
-          project_members(id)
+          project_members(id, user_id)
         `)
-        .or(user ? `visibility.eq.public,creator_id.eq.${user.id}` : 'visibility.eq.public')
+        .eq('creator_id', user.id)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setProjects(data as any || []);
+      if (ownedError) throw ownedError;
+
+      // Get projects where user is a member
+      const { data: memberProjects, error: memberError } = await supabase
+        .from('project_members')
+        .select(`
+          project_id,
+          projects (
+            *,
+            profiles!projects_creator_id_fkey(full_name, avatar_url, role),
+            project_members(id, user_id)
+          )
+        `)
+        .eq('user_id', user.id);
+
+      if (memberError) throw memberError;
+
+      // Get public projects from others
+      const { data: publicProjects, error: publicError } = await supabase
+        .from('projects')
+        .select(`
+          *,
+          profiles!projects_creator_id_fkey(full_name, avatar_url, role),
+          project_members(id, user_id)
+        `)
+        .eq('visibility', 'public')
+        .neq('creator_id', user.id)
+        .order('created_at', { ascending: false });
+
+      if (publicError) throw publicError;
+
+      // Combine and deduplicate projects
+      const memberProjectsList = memberProjects?.map(mp => mp.projects).filter(Boolean) || [];
+      const allProjects = [...(ownedProjects || []), ...memberProjectsList, ...(publicProjects || [])];
+      
+      // Remove duplicates by id
+      const uniqueProjects = Array.from(
+        new Map(allProjects.map(p => [p.id, p])).values()
+      );
+
+      setProjects(uniqueProjects as any || []);
     } catch (error) {
       console.error('Error loading projects:', error);
       toast({
@@ -113,6 +209,48 @@ const Projects = () => {
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExitTeam = async () => {
+    if (!exitingProject || !currentUserId) return;
+
+    try {
+      // Find the membership record
+      const project = projects.find(p => p.id === exitingProject.id);
+      const membership = project?.project_members?.find(m => m.user_id === currentUserId);
+
+      if (!membership) {
+        toast({
+          title: 'Error',
+          description: 'Membership not found',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      const { error } = await supabase
+        .from('project_members')
+        .delete()
+        .eq('id', membership.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Success',
+        description: 'You have left the team',
+      });
+
+      // Reload projects
+      loadProjects();
+      setExitingProject(null);
+    } catch (error) {
+      console.error('Error leaving project:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to leave team',
+        variant: 'destructive',
+      });
     }
   };
 
@@ -153,17 +291,17 @@ const Projects = () => {
     <div className="min-h-screen bg-background">
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4">
-          <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-10 sm:w-10" onClick={() => navigate('/dashboard')}>
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
+        <div className="container flex h-16 sm:h-18 items-center gap-2 sm:gap-4 px-4 sm:px-5">
+          <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-11 sm:w-11" onClick={() => navigate('/dashboard')}>
+            <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
           </Button>
           <div className="flex items-center gap-2">
-            <Briefcase className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-            <h1 className="text-base sm:text-xl font-bold">Build Spaces</h1>
+            <Briefcase className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
+            <h1 className="text-xl sm:text-2xl font-bold">Build Spaces</h1>
           </div>
           <div className="ml-auto">
-            <Button onClick={() => navigate('/projects/new')} size="sm" className="h-8 sm:h-10 text-xs sm:text-sm">
-              <Plus className="w-3.5 h-3.5 sm:w-4 sm:h-4 mr-1 sm:mr-2" />
+            <Button onClick={() => navigate('/projects/new')} size="sm" className="h-10 sm:h-11 text-xs sm:text-sm">
+              <Plus className="w-4 h-4 sm:w-5 sm:h-5 mr-1 sm:mr-2" />
               <span className="hidden sm:inline">New Project</span>
               <span className="sm:hidden">New</span>
             </Button>
@@ -236,17 +374,28 @@ const Projects = () => {
               const statusConfig = getStatusConfig(project.status);
               const StatusIcon = statusConfig.icon;
               const memberCount = project.project_members?.length || 0;
+              const isOwner = currentUserId && project.creator_id === currentUserId;
+              const isMember = currentUserId && project.project_members?.some(m => m.user_id === currentUserId);
 
               return (
                 <Card 
                   key={project.id} 
-                  className="hover:shadow-lg transition-shadow cursor-pointer"
-                  onClick={() => navigate(`/projects/${project.id}`)}
+                  className="hover:shadow-lg transition-shadow"
                 >
                   <CardHeader className="px-3 sm:px-6 pt-4 sm:pt-6 pb-3">
                     <div className="flex items-start justify-between gap-2">
-                      <div className="flex-1 min-w-0">
-                        <CardTitle className="text-base sm:text-lg truncate">{project.title}</CardTitle>
+                      <div 
+                        className="flex-1 min-w-0 cursor-pointer"
+                        onClick={() => navigate(`/projects/${project.id}`)}
+                      >
+                        <div className="flex items-center gap-2">
+                          <CardTitle className="text-base sm:text-lg truncate">{project.title}</CardTitle>
+                          {isMember && !isOwner && (
+                            <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-500 border-blue-500/20">
+                              Team Member
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex items-center gap-1.5 sm:gap-2 mt-2 flex-wrap">
                           <Badge variant="secondary" className="text-xs">
                             {project.category}
@@ -257,14 +406,32 @@ const Projects = () => {
                           </Badge>
                         </div>
                       </div>
-                      {project.visibility === 'private' ? (
-                        <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                      ) : (
-                        <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground flex-shrink-0" />
-                      )}
+                      <div className="flex items-center gap-2 flex-shrink-0">
+                        {project.visibility === 'private' ? (
+                          <Lock className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                        ) : (
+                          <Globe className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
+                        )}
+                        {isMember && !isOwner && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setExitingProject({ id: project.id, title: project.title });
+                            }}
+                          >
+                            <LogOut className="w-4 h-4" />
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </CardHeader>
-                  <CardContent className="space-y-3 sm:space-y-4 px-3 sm:px-6">
+                  <CardContent 
+                    className="space-y-3 sm:space-y-4 px-3 sm:px-6 cursor-pointer"
+                    onClick={() => navigate(`/projects/${project.id}`)}
+                  >
                     <p className="text-xs sm:text-sm text-muted-foreground line-clamp-3">
                       {project.description}
                     </p>
@@ -315,6 +482,27 @@ const Projects = () => {
           </div>
         )}
       </main>
+
+      {/* Exit Team Dialog */}
+      <AlertDialog open={!!exitingProject} onOpenChange={(open) => !open && setExitingProject(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Exit Team</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to leave "{exitingProject?.title}"? You will no longer have access to this project unless you are invited again.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleExitTeam}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Exit Team
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

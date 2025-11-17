@@ -438,7 +438,7 @@ const Messages = () => {
   };
 
   const subscribeToMessages = () => {
-    const channel = supabase
+    const messagesChannel = supabase
       .channel('messages')
       .on(
         'postgres_changes',
@@ -456,16 +456,64 @@ const Messages = () => {
       )
       .subscribe();
 
+    // Subscribe to conversation_participants changes to detect when user is removed
+    const participantsChannel = supabase
+      .channel('conversation_participants_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'conversation_participants',
+          filter: `user_id=eq.${currentUserId}`,
+        },
+        (payload) => {
+          console.log('Conversation participants changed:', payload);
+          
+          // If user was deleted from a conversation
+          if (payload.eventType === 'DELETE') {
+            const removedConversationId = payload.old.conversation_id;
+            
+            // If it's the currently selected conversation, clear it
+            if (selectedConversation?.id === removedConversationId) {
+              setSelectedConversation(null);
+              setMessages([]);
+              toast({
+                title: 'Access Removed',
+                description: 'You no longer have access to this conversation',
+                variant: 'destructive',
+              });
+            }
+            
+            // Remove from conversations list
+            setConversations(prev => prev.filter(c => c.id !== removedConversationId));
+          } else {
+            // User was added to a conversation or participant info changed
+            loadConversations();
+          }
+        }
+      )
+      .subscribe();
+
     return () => {
-      supabase.removeChannel(channel);
+      supabase.removeChannel(messagesChannel);
+      supabase.removeChannel(participantsChannel);
     };
   };
 
-  const filteredConversations = conversations.filter((conv) =>
-    conv.other_user?.full_name
-      ?.toLowerCase()
-      .includes(searchQuery.toLowerCase())
-  );
+  const filteredConversations = conversations.filter((conv) => {
+    if (searchQuery.trim() === '') return true;
+    
+    const query = searchQuery.toLowerCase();
+    
+    // For group conversations, search by group name
+    if (conv.conversation_type === 'group') {
+      return conv.group_name?.toLowerCase().includes(query) || false;
+    }
+    
+    // For direct conversations, search by other user's name
+    return conv.other_user?.full_name?.toLowerCase().includes(query) || false;
+  });
 
   if (loading) {
     return (
@@ -477,27 +525,25 @@ const Messages = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Header */}
-      <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
-        <div className="container flex h-14 sm:h-16 items-center gap-2 sm:gap-4 px-3 sm:px-4">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(-1)}
-            className="h-9 w-9 sm:h-10 sm:w-10 md:hidden"
-          >
-            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
-          </Button>
-          <MessageCircle className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-          <h1 className="text-lg sm:text-xl font-bold">Messages</h1>
-        </div>
-      </header>
-
-      <div className="container px-0 sm:px-4 py-0 sm:py-6 max-w-7xl mx-auto h-[calc(100vh-3.5rem)] sm:h-[calc(100vh-7rem)]">
+      <div className="container px-0 sm:px-4 py-0 sm:py-6 max-w-7xl mx-auto h-screen sm:h-[calc(100vh-3rem)]">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-0 md:gap-4 h-full">
           {/* Conversations List */}
           <Card className={`border-0 md:border rounded-none md:rounded-lg ${selectedConversation ? 'hidden md:block' : 'block'}`}>
             <CardContent className="p-0 h-full flex flex-col">
+              {/* Conversation List Header - Mobile Only */}
+              <div className="p-3 sm:p-4 border-b md:hidden flex items-center gap-3">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate(-1)}
+                  className="h-9 w-9"
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                </Button>
+                <MessageCircle className="w-5 h-5 text-primary" />
+                <h1 className="text-lg font-bold">Messages</h1>
+              </div>
+              
               {/* Search */}
               <div className="p-3 sm:p-4 border-b">
                 <div className="relative">
@@ -583,32 +629,32 @@ const Messages = () => {
             {selectedConversation ? (
               <CardContent className="p-0 h-full flex flex-col">
                 {/* Chat Header */}
-                <div className="p-3 sm:p-4 border-b flex items-center gap-3">
+                <div className="p-4 sm:p-5 border-b flex items-center gap-3">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setSelectedConversation(null)}
-                    className="md:hidden h-8 w-8"
+                    className="h-10 w-10"
                   >
-                    <ArrowLeft className="w-4 h-4" />
+                    <ArrowLeft className="w-5 h-5" />
                   </Button>
-                  <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
-                    <AvatarFallback className="text-sm">
+                  <Avatar className="w-11 h-11 sm:w-12 sm:h-12">
+                    <AvatarFallback className="text-base">
                       {selectedConversation.conversation_type === 'group'
                         ? selectedConversation.group_name?.charAt(0).toUpperCase() || 'G'
                         : selectedConversation.other_user?.full_name?.charAt(0).toUpperCase() || '?'}
                     </AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm sm:text-base truncate flex items-center gap-1.5">
+                    <p className="font-medium text-base sm:text-lg truncate flex items-center gap-1.5">
                       {selectedConversation.conversation_type === 'group'
                         ? (selectedConversation.group_name || 'Team Chat')
                         : (selectedConversation.other_user?.full_name || 'Loading...')}
                       {selectedConversation.conversation_type === 'group' && (
-                        <Users className="w-4 h-4 text-muted-foreground" />
+                        <Users className="w-5 h-5 text-muted-foreground" />
                       )}
                     </p>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-sm text-muted-foreground truncate">
                       {selectedConversation.conversation_type === 'group'
                         ? 'Team Group Chat'
                         : selectedConversation.other_user?.role || ''}
@@ -654,17 +700,22 @@ const Messages = () => {
                 </ScrollArea>
 
                 {/* Message Input */}
-                <div className="p-3 sm:p-4 border-t mb-16 md:mb-0">
-                  <div className="flex gap-2">
+                <div className="p-4 sm:p-4 mb-16 md:mb-0">
+                  <div className="flex items-center gap-2 bg-muted/50 rounded-full px-4 py-2">
                     <Input
                       placeholder="Type a message..."
                       value={newMessage}
                       onChange={(e) => setNewMessage(e.target.value)}
                       onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                      className="flex-1 h-9 sm:h-10 text-sm"
+                      className="flex-1 border-0 bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0 h-10 text-sm placeholder:text-muted-foreground/60"
                     />
-                    <Button onClick={sendMessage} size="icon" className="h-9 w-9 sm:h-10 sm:w-10">
-                      <Send className="w-4 h-4" />
+                    <Button 
+                      onClick={sendMessage} 
+                      size="icon" 
+                      variant="ghost"
+                      className="h-10 w-10 rounded-full hover:bg-transparent flex-shrink-0"
+                    >
+                      <Send className="w-5 h-5" />
                     </Button>
                   </div>
                 </div>
