@@ -57,7 +57,11 @@ interface Project {
 
 const Projects = () => {
   const [projects, setProjects] = useState<Project[]>([]);
+  const [myProjects, setMyProjects] = useState<Project[]>([]);
+  const [teamProjects, setTeamProjects] = useState<Project[]>([]);
+  const [publicProjects, setPublicProjects] = useState<Project[]>([]);
   const [filteredProjects, setFilteredProjects] = useState<Project[]>([]);
+  const [activeTab, setActiveTab] = useState<'my' | 'team' | 'public'>('my');
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
@@ -122,7 +126,7 @@ const Projects = () => {
 
   useEffect(() => {
     filterProjects();
-  }, [searchQuery, categoryFilter, statusFilter, projects]);
+  }, [searchQuery, categoryFilter, statusFilter, myProjects, teamProjects, publicProjects, activeTab]);
 
   const loadProjects = async () => {
     try {
@@ -144,7 +148,10 @@ const Projects = () => {
           .order('created_at', { ascending: false });
 
         if (error) throw error;
-        setProjects(data as any || []);
+        setPublicProjects(data as any || []);
+        setMyProjects([]);
+        setTeamProjects([]);
+        setActiveTab('public');
         return;
       }
 
@@ -161,12 +168,11 @@ const Projects = () => {
 
       if (ownedError) throw ownedError;
 
-      // Get projects where user is a member
+      // Get projects where user is a member (but not owner)
       const { data: memberProjects, error: memberError } = await supabase
         .from('project_members')
         .select(`
-          project_id,
-          projects (
+          projects!inner (
             *,
             profiles!projects_creator_id_fkey(full_name, avatar_url, role),
             project_members(id, user_id)
@@ -176,8 +182,8 @@ const Projects = () => {
 
       if (memberError) throw memberError;
 
-      // Get public projects from others
-      const { data: publicProjects, error: publicError } = await supabase
+      // Get public projects from others (not owner, not member)
+      const { data: otherPublicProjects, error: publicError } = await supabase
         .from('projects')
         .select(`
           *,
@@ -190,16 +196,37 @@ const Projects = () => {
 
       if (publicError) throw publicError;
 
-      // Combine and deduplicate projects
-      const memberProjectsList = memberProjects?.map(mp => mp.projects).filter(Boolean) || [];
-      const allProjects = [...(ownedProjects || []), ...memberProjectsList, ...(publicProjects || [])];
+      // Process member projects - extract the projects array properly
+      const memberProjectsList = memberProjects?.map((mp: any) => mp.projects).filter(Boolean) || [];
       
-      // Remove duplicates by id
-      const uniqueProjects = Array.from(
-        new Map(allProjects.map(p => [p.id, p])).values()
+      console.log('Member projects raw:', memberProjects);
+      console.log('Member projects list:', memberProjectsList);
+      
+      // Filter out projects where user is owner from member list
+      const pureTeamProjects = memberProjectsList.filter(
+        (p: any) => p && p.creator_id !== user.id
       );
 
-      setProjects(uniqueProjects as any || []);
+      // Filter public projects to exclude ones user is already in
+      const memberProjectIds = new Set(pureTeamProjects.map((p: any) => p.id));
+      const ownedProjectIds = new Set(ownedProjects?.map(p => p.id) || []);
+      const filteredPublicProjects = otherPublicProjects?.filter(
+        p => !memberProjectIds.has(p.id) && !ownedProjectIds.has(p.id)
+      ) || [];
+
+      setMyProjects(ownedProjects as any || []);
+      setTeamProjects(pureTeamProjects as any || []);
+      setPublicProjects(filteredPublicProjects as any || []);
+
+      // Set default active tab based on what user has
+      if ((ownedProjects?.length || 0) > 0) {
+        setActiveTab('my');
+      } else if (pureTeamProjects.length > 0) {
+        setActiveTab('team');
+      } else {
+        setActiveTab('public');
+      }
+
     } catch (error) {
       console.error('Error loading projects:', error);
       toast({
@@ -216,8 +243,8 @@ const Projects = () => {
     if (!exitingProject || !currentUserId) return;
 
     try {
-      // Find the membership record
-      const project = projects.find(p => p.id === exitingProject.id);
+      // Find the membership record from teamProjects
+      const project = teamProjects.find(p => p.id === exitingProject.id);
       const membership = project?.project_members?.find(m => m.user_id === currentUserId);
 
       if (!membership) {
@@ -241,8 +268,8 @@ const Projects = () => {
         description: 'You have left the team',
       });
 
-      // Reload projects
-      loadProjects();
+      // Reload projects to refresh all tabs
+      await loadProjects();
       setExitingProject(null);
     } catch (error) {
       console.error('Error leaving project:', error);
@@ -255,7 +282,17 @@ const Projects = () => {
   };
 
   const filterProjects = () => {
-    let filtered = projects;
+    // Get current list based on active tab
+    let currentList: Project[] = [];
+    if (activeTab === 'my') {
+      currentList = myProjects;
+    } else if (activeTab === 'team') {
+      currentList = teamProjects;
+    } else {
+      currentList = publicProjects;
+    }
+
+    let filtered = currentList;
 
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -352,6 +389,38 @@ const Projects = () => {
           </CardContent>
         </Card>
 
+        {/* Project Tabs */}
+        {currentUserId && (
+          <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'my' | 'team' | 'public')} className="mb-4 sm:mb-6">
+            <TabsList className="grid w-full grid-cols-3">
+              <TabsTrigger value="my" className="text-xs sm:text-sm">
+                My Projects
+                {myProjects.length > 0 && (
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {myProjects.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="team" className="text-xs sm:text-sm">
+                Team Projects
+                {teamProjects.length > 0 && (
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {teamProjects.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+              <TabsTrigger value="public" className="text-xs sm:text-sm">
+                Discover
+                {publicProjects.length > 0 && (
+                  <Badge variant="secondary" className="ml-2 text-xs">
+                    {publicProjects.length}
+                  </Badge>
+                )}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
+
         {/* Projects Grid */}
         {loading ? (
           <div className="text-center py-8 sm:py-12">
@@ -361,11 +430,31 @@ const Projects = () => {
           <Card>
             <CardContent className="text-center py-8 sm:py-12">
               <Briefcase className="w-10 h-10 sm:w-12 sm:h-12 mx-auto mb-3 opacity-50" />
-              <p className="text-muted-foreground text-sm sm:text-base">No projects found</p>
-              <Button className="mt-4 h-9 sm:h-10 text-sm" onClick={() => navigate('/projects/new')}>
-                <Plus className="w-4 h-4 mr-2" />
-                Create Your First Project
-              </Button>
+              {activeTab === 'my' && (
+                <>
+                  <p className="text-muted-foreground text-sm sm:text-base">You haven't created any projects yet</p>
+                  <Button className="mt-4 h-9 sm:h-10 text-sm" onClick={() => navigate('/projects/new')}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Your First Project
+                  </Button>
+                </>
+              )}
+              {activeTab === 'team' && (
+                <>
+                  <p className="text-muted-foreground text-sm sm:text-base">You're not part of any team projects yet</p>
+                  <p className="text-xs text-muted-foreground mt-2">Join projects from the Discover tab or get invited by others</p>
+                </>
+              )}
+              {activeTab === 'public' && (
+                <>
+                  <p className="text-muted-foreground text-sm sm:text-base">No public projects available</p>
+                  <p className="text-xs text-muted-foreground mt-2">Be the first to create a public project!</p>
+                  <Button className="mt-4 h-9 sm:h-10 text-sm" onClick={() => navigate('/projects/new')}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Create Project
+                  </Button>
+                </>
+              )}
             </CardContent>
           </Card>
         ) : (
