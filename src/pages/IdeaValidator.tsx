@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -17,6 +17,8 @@ import {
   AlertCircle,
   CheckCircle2,
   Brain,
+  History,
+  Save,
 } from 'lucide-react';
 
 interface Message {
@@ -28,17 +30,25 @@ interface Message {
 const IdeaValidator = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get('session');
+  
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [ideaSummary, setIdeaSummary] = useState('');
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionId);
+  const [autoSave, setAutoSave] = useState(true);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Add welcome message
-    setMessages([{
-      role: 'assistant',
-      content: `👋 Hi! I'm your AI Idea Validator. I'll help you validate your startup idea with real-time market research and honest feedback.
+    if (sessionId) {
+      loadSession(sessionId);
+    } else {
+      // Add welcome message for new chats
+      setMessages([{
+        role: 'assistant',
+        content: `👋 Hi! I'm your AI Idea Validator. I'll help you validate your startup idea with real-time market research and honest feedback.
 
 **Tell me about your idea:**
 - What problem does it solve?
@@ -46,9 +56,102 @@ const IdeaValidator = () => {
 - What makes it unique?
 
 I'll research the market, analyze competition, and give you brutally honest feedback! 🚀`,
-      timestamp: new Date(),
-    }]);
-  }, []);
+        timestamp: new Date(),
+      }]);
+    }
+  }, [sessionId]);
+
+  const loadSession = async (sessionId: string) => {
+    try {
+      // Load session details
+      const { data: session, error: sessionError } = await supabase
+        .from('idea_validator_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+
+      if (sessionError) throw sessionError;
+
+      setIdeaSummary(session.idea_summary || '');
+      setCurrentSessionId(sessionId);
+
+      // Load messages
+      const { data: messagesData, error: messagesError } = await supabase
+        .from('idea_validator_messages')
+        .select('*')
+        .eq('session_id', sessionId)
+        .order('created_at', { ascending: true });
+
+      if (messagesError) throw messagesError;
+
+      const loadedMessages: Message[] = messagesData.map(msg => ({
+        role: msg.role as 'user' | 'assistant',
+        content: msg.content,
+        timestamp: new Date(msg.created_at),
+      }));
+
+      setMessages(loadedMessages);
+    } catch (error) {
+      console.error('Error loading session:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load chat session',
+        variant: 'destructive',
+      });
+      navigate('/idea-validator');
+    }
+  };
+
+  const saveSession = async (userMsg: Message, assistantMsg: Message, hasWebContext: boolean) => {
+    if (!autoSave) return;
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      let sessionIdToUse = currentSessionId;
+
+      // Create new session if none exists
+      if (!sessionIdToUse) {
+        const title = ideaSummary || userMsg.content.slice(0, 50) + '...';
+        
+        const { data: newSession, error: sessionError } = await supabase
+          .from('idea_validator_sessions')
+          .insert({
+            user_id: user.id,
+            title,
+            idea_summary: ideaSummary || userMsg.content.slice(0, 200),
+          })
+          .select()
+          .single();
+
+        if (sessionError) throw sessionError;
+        
+        sessionIdToUse = newSession.id;
+        setCurrentSessionId(sessionIdToUse);
+      }
+
+      // Save messages
+      await supabase
+        .from('idea_validator_messages')
+        .insert([
+          {
+            session_id: sessionIdToUse,
+            role: 'user',
+            content: userMsg.content,
+            has_web_context: false,
+          },
+          {
+            session_id: sessionIdToUse,
+            role: 'assistant',
+            content: assistantMsg.content,
+            has_web_context: hasWebContext,
+          },
+        ]);
+    } catch (error) {
+      console.error('Error saving session:', error);
+    }
+  };
 
   useEffect(() => {
     // Auto-scroll to bottom
@@ -95,6 +198,9 @@ I'll research the market, analyze competition, and give you brutally honest feed
       };
 
       setMessages(prev => [...prev, assistantMessage]);
+
+      // Auto-save to database
+      await saveSession(userMessage, assistantMessage, data.hasWebContext || false);
     } catch (error: any) {
       console.error('Error:', error);
       toast({
@@ -140,7 +246,24 @@ I'll research the market, analyze competition, and give you brutally honest feed
             <Brain className="w-6 h-6 text-primary" />
             <h1 className="text-xl sm:text-2xl font-bold">Idea Validator</h1>
           </div>
-          <Badge variant="secondary" className="text-xs">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => navigate('/idea-validator-history')}
+            className="hidden sm:flex"
+          >
+            <History className="w-4 h-4 mr-2" />
+            History
+          </Button>
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate('/idea-validator-history')}
+            className="sm:hidden h-10 w-10"
+          >
+            <History className="w-5 h-5" />
+          </Button>
+          <Badge variant="secondary" className="text-xs hidden sm:flex">
             <Sparkles className="w-3 h-3 mr-1" />
             AI Powered
           </Badge>

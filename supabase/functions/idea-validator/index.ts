@@ -66,10 +66,11 @@ async function validateIdea(messages: Message[], ideaContext: string): Promise<s
   const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
   
   if (!geminiApiKey) {
-    throw new Error('GEMINI_API_KEY not configured');
+    return 'AI service is not configured. Please ask the administrator to set up the API key.';
   }
 
-  const systemPrompt = `You are an expert startup idea validator and business advisor. Your role is to:
+  try {
+    const systemPrompt = `You are an expert startup idea validator and business advisor. Your role is to:
 
 1. **Thoroughly analyze startup ideas** with brutal honesty
 2. **Provide real-time market research** using latest web data
@@ -89,60 +90,65 @@ Be conversational, encouraging, but HONEST. If an idea has major flaws, explain 
 
 ${ideaContext}`;
 
-  // Format messages for Gemini
-  const formattedMessages = messages.map(msg => ({
-    role: msg.role === 'user' ? 'user' : 'model',
-    parts: [{ text: msg.content }]
-  }));
+    // Format messages for Gemini
+    const formattedMessages = messages.map(msg => ({
+      role: msg.role === 'user' ? 'user' : 'model',
+      parts: [{ text: msg.content }]
+    }));
 
-  const response = await fetch(
-    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        contents: [
-          {
-            role: 'user',
-            parts: [{ text: systemPrompt }]
-          },
-          ...formattedMessages
-        ],
-        generationConfig: {
-          temperature: 0.7,
-          topK: 40,
-          topP: 0.95,
-          maxOutputTokens: 2048,
+    const response = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        safetySettings: [
-          {
-            category: "HARM_CATEGORY_HARASSMENT",
-            threshold: "BLOCK_NONE"
+        body: JSON.stringify({
+          contents: [
+            {
+              role: 'user',
+              parts: [{ text: systemPrompt }]
+            },
+            ...formattedMessages
+          ],
+          generationConfig: {
+            temperature: 0.7,
+            topK: 40,
+            topP: 0.95,
+            maxOutputTokens: 2048,
           },
-          {
-            category: "HARM_CATEGORY_HATE_SPEECH",
-            threshold: "BLOCK_NONE"
-          }
-        ]
-      }),
+          safetySettings: [
+            {
+              category: "HARM_CATEGORY_HARASSMENT",
+              threshold: "BLOCK_NONE"
+            },
+            {
+              category: "HARM_CATEGORY_HATE_SPEECH",
+              threshold: "BLOCK_NONE"
+            }
+          ]
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      const error = await response.text();
+      console.error('Gemini API error:', response.status, error);
+      throw new Error(`AI service error: ${response.status}`);
     }
-  );
 
-  if (!response.ok) {
-    const error = await response.text();
-    console.error('Gemini API error:', error);
-    throw new Error(`Gemini API error: ${response.status}`);
+    const data = await response.json();
+    
+    if (!data.candidates || data.candidates.length === 0) {
+      console.error('No candidates in response:', data);
+      throw new Error('No response from AI');
+    }
+
+    return data.candidates[0].content.parts[0].text;
+  } catch (error) {
+    console.error('Validation error:', error);
+    throw error;
   }
-
-  const data = await response.json();
-  
-  if (!data.candidates || data.candidates.length === 0) {
-    throw new Error('No response from Gemini');
-  }
-
-  return data.candidates[0].content.parts[0].text;
 }
 
 serve(async (req) => {
@@ -152,21 +158,56 @@ serve(async (req) => {
   }
 
   try {
+    // Check API keys first
+    const geminiApiKey = Deno.env.get('GEMINI_API_KEY');
+    const serperApiKey = Deno.env.get('SERPER_API_KEY');
+    
+    console.log('API Keys check:', {
+      gemini: geminiApiKey ? 'configured' : 'MISSING',
+      serper: serperApiKey ? 'configured' : 'MISSING'
+    });
+
+    if (!geminiApiKey) {
+      return new Response(
+        JSON.stringify({ 
+          response: 'The AI service is not configured yet. Please contact the administrator to set up the GEMINI_API_KEY.'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
+    }
+
     const { messages, ideaSummary } = await req.json();
 
     if (!messages || !Array.isArray(messages)) {
-      throw new Error('Messages array is required');
+      return new Response(
+        JSON.stringify({ 
+          response: 'Please provide a valid message to validate your idea.'
+        }),
+        {
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+          status: 200,
+        }
+      );
     }
 
     const lastUserMessage = messages[messages.length - 1]?.content || '';
     
-    // Perform web search for relevant context
-    const searchQuery = ideaSummary 
-      ? `${ideaSummary} startup market analysis competition` 
-      : `${lastUserMessage} startup idea market research`;
-    
-    console.log('Searching web for:', searchQuery);
-    const webContext = await searchWeb(searchQuery);
+    // Perform web search for relevant context (non-blocking)
+    let webContext = '';
+    try {
+      const searchQuery = ideaSummary 
+        ? `${ideaSummary} startup market analysis competition` 
+        : `${lastUserMessage} startup idea market research`;
+      
+      console.log('Searching web for:', searchQuery);
+      webContext = await searchWeb(searchQuery);
+    } catch (searchError) {
+      console.error('Search error (non-fatal):', searchError);
+      webContext = ''; // Continue without web context
+    }
     
     // Get AI validation with web context
     const aiResponse = await validateIdea(messages, webContext);
@@ -178,17 +219,19 @@ serve(async (req) => {
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 200,
       }
     );
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Fatal error:', error);
+    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    
     return new Response(
       JSON.stringify({ 
-        error: error.message || 'An error occurred',
-        response: 'I apologize, but I encountered an error. Please try again.'
+        response: `I apologize, but I encountered an error: ${errorMessage}. Please try again or contact support if the issue persists.`
       }),
       {
-        status: 500,
+        status: 200, // Return 200 to avoid client-side errors
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       }
     );
