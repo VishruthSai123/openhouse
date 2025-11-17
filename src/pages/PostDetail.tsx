@@ -405,7 +405,10 @@ const PostDetail = () => {
         <Card className="mb-6">
           <CardHeader className="p-4 sm:p-6">
             <div className="flex items-start gap-3 sm:gap-4">
-              <Avatar className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0">
+              <Avatar 
+                className="w-10 h-10 sm:w-12 sm:h-12 flex-shrink-0 cursor-pointer"
+                onClick={() => navigate(`/profile/${post.author_id}`)}
+              >
                 <AvatarFallback className="text-sm sm:text-base">
                   {post.profiles?.full_name?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
@@ -413,7 +416,10 @@ const PostDetail = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm sm:text-base">
+                    <p 
+                      className="font-medium text-sm sm:text-base cursor-pointer hover:underline"
+                      onClick={() => navigate(`/profile/${post.author_id}`)}
+                    >
                       {post.profiles?.full_name || 'Anonymous'}
                     </p>
                     <p className="text-xs sm:text-sm text-muted-foreground">
@@ -568,13 +574,19 @@ const PostDetail = () => {
                 ) : (
                   comments.map((comment) => (
                     <div key={comment.id} className="flex gap-3 pb-4 border-b last:border-b-0">
-                      <Avatar className="w-8 h-8 flex-shrink-0">
+                      <Avatar 
+                        className="w-8 h-8 flex-shrink-0 cursor-pointer"
+                        onClick={() => navigate(`/profile/${comment.user_id}`)}
+                      >
                         <AvatarFallback className="text-xs">
                           {comment.profiles?.full_name?.charAt(0).toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
-                        <p className="text-sm font-medium">
+                        <p 
+                          className="text-sm font-medium cursor-pointer hover:underline"
+                          onClick={() => navigate(`/profile/${comment.user_id}`)}
+                        >
                           {comment.profiles?.full_name || 'Anonymous'}
                         </p>
                         <p className="text-sm text-muted-foreground mt-1">

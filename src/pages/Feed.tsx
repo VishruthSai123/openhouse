@@ -641,7 +641,13 @@ const Feed = () => {
                 >
                   <CardHeader className="p-3 sm:p-6">
                     <div className="flex items-start gap-3">
-                      <Avatar className="w-8 h-8 sm:w-10 sm:h-10">
+                      <Avatar 
+                        className="w-8 h-8 sm:w-10 sm:h-10 cursor-pointer"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigate(`/profile/${post.author_id}`);
+                        }}
+                      >
                         <AvatarFallback className="text-xs sm:text-sm">
                           {post.profiles?.full_name?.charAt(0).toUpperCase() || 'U'}
                         </AvatarFallback>
@@ -649,7 +655,13 @@ const Feed = () => {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm sm:text-base truncate">
+                            <p 
+                              className="font-medium text-sm sm:text-base truncate cursor-pointer hover:underline"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                navigate(`/profile/${post.author_id}`);
+                              }}
+                            >
                               {post.profiles?.full_name || 'Anonymous'}
                             </p>
                             <p className="text-xs text-muted-foreground truncate">

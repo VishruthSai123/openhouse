@@ -23,6 +23,7 @@ import Feed from "./pages/Feed";
 import Messages from "./pages/Messages";
 import PostDetail from "./pages/PostDetail";
 import Connections from "./pages/Connections";
+import Profile from "./pages/Profile";
 import MobileBottomNav from "./components/MobileBottomNav";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/feed/:postId" element={<PostDetail />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/connections" element={<Connections />} />
+            <Route path="/profile/:userId" element={<Profile />} />
             <Route path="/ideas" element={<IdeasHub />} />
             <Route path="/ideas/new" element={<CreateIdea />} />
             <Route path="/ideas/:id" element={<IdeaDetail />} />
