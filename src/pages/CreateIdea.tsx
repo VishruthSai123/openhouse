@@ -304,7 +304,7 @@ const CreateIdea = () => {
                   <Button
                     type="submit"
                     size="lg"
-                    className="flex-1 h-12 sm:h-11 text-sm sm:text-base font-medium"
+                    className="h-12 sm:h-11 text-sm sm:text-base font-medium"
                     disabled={loading}
                   >
                     {loading ? 'Posting...' : 'Post Idea (+10 Coins)'}

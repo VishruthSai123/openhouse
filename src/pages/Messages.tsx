@@ -700,7 +700,7 @@ const Messages = () => {
                 </ScrollArea>
 
                 {/* Message Input */}
-                <div className="p-4 sm:p-4 mb-16 md:mb-0">
+                <div className="p-4 sm:p-4">
                   <div className="flex items-center gap-2 bg-muted/50 rounded-full px-4 py-2">
                     <Input
                       placeholder="Type a message..."
