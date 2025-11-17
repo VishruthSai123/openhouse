@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ArrowLeft, Trophy, Coins, Lightbulb, Briefcase, Crown, Medal, Award } from 'lucide-react';
+import { ArrowLeft, Trophy, Coins, Lightbulb, Briefcase, Crown, Medal, Award, Home } from 'lucide-react';
 
 interface LeaderboardEntry {
   id: string;

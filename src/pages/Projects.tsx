@@ -329,8 +329,7 @@ const Projects = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
         <div className="container flex h-16 sm:h-18 items-center gap-2 sm:gap-4 px-4 sm:px-5">
-                    <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-11 sm:w-11" onClick={() => navigate('/feed')}>
-            <Home className="w-5 h-5" />
+          <Button variant="ghost" size="icon" className="h-10 w-10 sm:h-11 sm:w-11" onClick={() => navigate('/feed')}>
             <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6" />
           </Button>
           <div className="flex items-center gap-2">
