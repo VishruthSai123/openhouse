@@ -18,8 +18,11 @@ import {
   Plus,
   TrendingUp,
   MessageSquare,
-  Calendar
+  Calendar,
+  Moon,
+  Sun
 } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface Profile {
   id: string;
@@ -42,6 +45,7 @@ const Dashboard = () => {
     connectionsCount: 0,
   });
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
   useEffect(() => {
     loadUserData();
@@ -247,6 +251,19 @@ const Dashboard = () => {
           </div>
           
           <div className="flex items-center gap-1 sm:gap-3">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-10 w-10 sm:h-11 sm:w-11" 
+              onClick={toggleTheme}
+              title={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+            >
+              {theme === 'light' ? (
+                <Moon className="w-4 h-4 sm:w-5 sm:h-5 transition-all" />
+              ) : (
+                <Sun className="w-4 h-4 sm:w-5 sm:h-5 transition-all" />
+              )}
+            </Button>
             <Button variant="ghost" size="sm" className="gap-1 sm:gap-2 px-2 sm:px-3">
               <Coins className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
               <span className="font-semibold text-xs sm:text-sm">{profile?.builder_coins || 0}</span>
