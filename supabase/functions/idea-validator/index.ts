@@ -195,6 +195,12 @@ serve(async (req) => {
 
     const lastUserMessage = messages[messages.length - 1]?.content || '';
     
+    console.log('Processing request:', {
+      messageCount: messages.length,
+      ideaSummary: ideaSummary ? 'provided' : 'none',
+      lastMessage: lastUserMessage.slice(0, 50) + '...'
+    });
+    
     // Perform web search for relevant context (non-blocking)
     let webContext = '';
     try {
@@ -202,15 +208,18 @@ serve(async (req) => {
         ? `${ideaSummary} startup market analysis competition` 
         : `${lastUserMessage} startup idea market research`;
       
-      console.log('Searching web for:', searchQuery);
+      console.log('Starting web search for:', searchQuery);
       webContext = await searchWeb(searchQuery);
+      console.log('Web search completed, context length:', webContext.length);
     } catch (searchError) {
       console.error('Search error (non-fatal):', searchError);
       webContext = ''; // Continue without web context
     }
     
+    console.log('Starting AI validation...');
     // Get AI validation with web context
     const aiResponse = await validateIdea(messages, webContext);
+    console.log('AI validation completed');
 
     return new Response(
       JSON.stringify({ 
@@ -225,10 +234,16 @@ serve(async (req) => {
   } catch (error) {
     console.error('Fatal error:', error);
     const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    const errorStack = error instanceof Error ? error.stack : '';
+    
+    console.error('Error details:', {
+      message: errorMessage,
+      stack: errorStack
+    });
     
     return new Response(
       JSON.stringify({ 
-        response: `I apologize, but I encountered an error: ${errorMessage}. Please try again or contact support if the issue persists.`
+        response: `I apologize, but I encountered an error while processing your request. Error: ${errorMessage}. Please try again or contact support if the issue persists.`
       }),
       {
         status: 200, // Return 200 to avoid client-side errors

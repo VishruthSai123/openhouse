@@ -36,6 +36,7 @@ const IdeaValidator = () => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [thinkingState, setThinkingState] = useState<'searching' | 'analyzing' | null>(null);
   const [ideaSummary, setIdeaSummary] = useState('');
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(sessionId);
   const [autoSave, setAutoSave] = useState(true);
@@ -179,6 +180,13 @@ I'll research the market, analyze competition, and give you brutally honest feed
     }
 
     try {
+      // Show searching state
+      setThinkingState('searching');
+      await new Promise(resolve => setTimeout(resolve, 800)); // Brief pause for UX
+      
+      // Show analyzing state
+      setThinkingState('analyzing');
+
       const { data, error } = await supabase.functions.invoke('idea-validator', {
         body: {
           messages: [...messages, userMessage].map(m => ({
@@ -190,6 +198,9 @@ I'll research the market, analyze competition, and give you brutally honest feed
       });
 
       if (error) throw error;
+
+      // Clear thinking state
+      setThinkingState(null);
 
       const assistantMessage: Message = {
         role: 'assistant',
@@ -203,6 +214,8 @@ I'll research the market, analyze competition, and give you brutally honest feed
       await saveSession(userMessage, assistantMessage, data.hasWebContext || false);
     } catch (error: any) {
       console.error('Error:', error);
+      setThinkingState(null);
+      
       toast({
         title: 'Error',
         description: error.message || 'Failed to get response. Please try again.',
@@ -317,7 +330,48 @@ I'll research the market, analyze competition, and give you brutally honest feed
                     </div>
                   </div>
                 ))}
-                {loading && (
+                
+                {/* Thinking State Component */}
+                {loading && thinkingState && (
+                  <div className="flex gap-3 justify-start">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Brain className="w-4 h-4 text-primary animate-pulse" />
+                    </div>
+                    <div className="rounded-lg px-4 py-3 bg-muted border border-primary/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        {thinkingState === 'searching' ? (
+                          <>
+                            <Search className="w-4 h-4 text-primary animate-pulse" />
+                            <span className="text-sm font-medium text-primary">Searching the web...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 text-primary animate-pulse" />
+                            <span className="text-sm font-medium text-primary">Analyzing your idea...</span>
+                          </>
+                        )}
+                      </div>
+                      <div className="flex gap-1">
+                        <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                        <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                        <div className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                      </div>
+                      {thinkingState === 'searching' && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Gathering market data and competitor info
+                        </p>
+                      )}
+                      {thinkingState === 'analyzing' && (
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Processing insights and preparing feedback
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {/* Simple Loading State (fallback) */}
+                {loading && !thinkingState && (
                   <div className="flex gap-3 justify-start">
                     <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
                       <Brain className="w-4 h-4 text-primary animate-pulse" />
