@@ -90,43 +90,28 @@ Be conversational, encouraging, but HONEST. If an idea has major flaws, explain 
 
 ${ideaContext}`;
 
-    // Format messages for Gemini
-    const formattedMessages = messages.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }));
+    // Format messages for OpenAI-compatible format
+    const formattedMessages = [
+      { role: 'system', content: systemPrompt },
+      ...messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }))
+    ];
 
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${geminiApiKey}`,
+      `https://generativelanguage.googleapis.com/v1beta/openai/chat/completions`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${geminiApiKey}`,
         },
         body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [{ text: systemPrompt }]
-            },
-            ...formattedMessages
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2048,
-          },
-          safetySettings: [
-            {
-              category: "HARM_CATEGORY_HARASSMENT",
-              threshold: "BLOCK_NONE"
-            },
-            {
-              category: "HARM_CATEGORY_HATE_SPEECH",
-              threshold: "BLOCK_NONE"
-            }
-          ]
+          model: 'gemini-2.0-flash-exp',
+          messages: formattedMessages,
+          temperature: 0.7,
+          max_tokens: 2048,
         }),
       }
     );
@@ -134,17 +119,28 @@ ${ideaContext}`;
     if (!response.ok) {
       const error = await response.text();
       console.error('Gemini API error:', response.status, error);
-      throw new Error(`AI service error: ${response.status}`);
+      
+      // More specific error messages
+      if (response.status === 404) {
+        throw new Error(`Gemini API 404: Endpoint or model not found. Check model name.`);
+      } else if (response.status === 403) {
+        throw new Error(`Gemini API 403: API key doesn't have permission.`);
+      } else if (response.status === 429) {
+        throw new Error(`Gemini API rate limit exceeded. Please try again in a few moments.`);
+      } else {
+        throw new Error(`Gemini API error ${response.status}: ${error.slice(0, 100)}`);
+      }
     }
 
     const data = await response.json();
     
-    if (!data.candidates || data.candidates.length === 0) {
-      console.error('No candidates in response:', data);
+    // OpenAI-compatible response format
+    if (!data.choices || data.choices.length === 0) {
+      console.error('No choices in response:', data);
       throw new Error('No response from AI');
     }
 
-    return data.candidates[0].content.parts[0].text;
+    return data.choices[0].message.content;
   } catch (error) {
     console.error('Validation error:', error);
     throw error;
