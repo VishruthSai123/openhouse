@@ -148,14 +148,21 @@ const Feed = () => {
       setCurrentUserId(user.id);
       
       // Load user profile
-      const { data: profile } = await supabase
+      const { data: profile, error } = await supabase
         .from('profiles')
         .select('full_name, avatar_url')
         .eq('id', user.id)
         .single();
       
+      console.log('Current user profile:', profile);
+      console.log('Avatar URL:', profile?.avatar_url);
+      
       if (profile) {
         setCurrentUserProfile(profile);
+      }
+      
+      if (error) {
+        console.error('Error loading profile:', error);
       }
     }
   };
