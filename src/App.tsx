@@ -19,6 +19,7 @@ import CreateProject from "./pages/CreateProject";
 import ProjectDetail from "./pages/ProjectDetail";
 import Leaderboard from "./pages/Leaderboard";
 import Mentorship from "./pages/Mentorship";
+import Dashboard from "./pages/Dashboard";
 import Feed from "./pages/Feed";
 import Messages from "./pages/Messages";
 import PostDetail from "./pages/PostDetail";
@@ -44,7 +45,7 @@ const App = () => (
             <Route path="/onboarding" element={<Onboarding />} />
             <Route path="/payment" element={<Payment />} />
             <Route path="/home" element={<Feed />} />
-            <Route path="/dashboard" element={<Feed />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/feed" element={<Feed />} />
             <Route path="/feed/:postId" element={<PostDetail />} />
             <Route path="/messages" element={<Messages />} />
