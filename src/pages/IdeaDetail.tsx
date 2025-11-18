@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, ArrowUpCircle, MessageSquare, Send, Calendar } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import PostMenu from '@/components/PostMenu';
 
 interface IdeaDetail {
   id: string;
@@ -230,6 +231,60 @@ const IdeaDetail = () => {
     }
   };
 
+  const handleEdit = () => {
+    navigate(`/post/${id}/edit`);
+  };
+
+  const handleHide = async () => {
+    try {
+      const { error } = await supabase
+        .from('ideas')
+        .update({ is_hidden: true })
+        .eq('id', id)
+        .eq('user_id', currentUser?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Post hidden',
+        description: 'Your post has been hidden successfully.',
+      });
+
+      navigate('/ideas');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('ideas')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', currentUser?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Post deleted',
+        description: 'Your post has been permanently deleted.',
+      });
+
+      navigate('/ideas');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const awardCoins = async (userId: string, amount: number, reason: string) => {
     try {
       await supabase
@@ -289,19 +344,27 @@ const IdeaDetail = () => {
                 <Badge variant="secondary" className="text-xs">{idea.category}</Badge>
                 <Badge variant="outline" className="text-xs whitespace-nowrap">{stages[idea.stage as keyof typeof stages]}</Badge>
               </div>
+              {currentUser && idea.user_id === currentUser.id && (
+                <PostMenu
+                  postId={idea.id}
+                  onEdit={handleEdit}
+                  onHide={handleHide}
+                  onDelete={handleDelete}
+                />
+              )}
             </div>
             
             <CardTitle className="text-xl sm:text-2xl lg:text-3xl">{idea.title}</CardTitle>
             
             {/* Author Info */}
             <div className="flex items-center gap-2 sm:gap-3 mt-3 sm:mt-4">
-              <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+              <Avatar className="h-8 w-8 sm:h-10 sm:w-10 cursor-pointer" onClick={() => navigate(`/profile/${idea.user_id}`)}>
                 <AvatarFallback className="bg-primary/10 text-xs sm:text-sm">
                   {idea.profiles.full_name?.charAt(0) || '?'}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0">
-                <p className="font-semibold text-sm sm:text-base truncate">{idea.profiles.full_name}</p>
+                <p className="font-semibold text-sm sm:text-base truncate cursor-pointer hover:text-primary transition-colors" onClick={() => navigate(`/profile/${idea.user_id}`)}>{idea.profiles.full_name}</p>
                 <div className="flex items-center gap-1.5 sm:gap-2 text-xs sm:text-sm text-muted-foreground">
                   {idea.profiles.role && <span className="truncate">{idea.profiles.role}</span>}
                   <span>•</span>
@@ -402,14 +465,14 @@ const IdeaDetail = () => {
               <div className="space-y-3 sm:space-y-4">
                 {comments.map(comment => (
                   <div key={comment.id} className="flex gap-2 sm:gap-3">
-                    <Avatar className="flex-shrink-0 h-7 w-7 sm:h-9 sm:w-9">
+                    <Avatar className="flex-shrink-0 h-7 w-7 sm:h-9 sm:w-9 cursor-pointer" onClick={() => navigate(`/profile/${comment.user_id}`)}>
                       <AvatarFallback className="bg-primary/10 text-xs">
                         {comment.profiles.full_name?.charAt(0) || '?'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1 min-w-0">
                       <div className="flex flex-wrap items-center gap-1 sm:gap-2">
-                        <span className="font-semibold text-xs sm:text-sm">
+                        <span className="font-semibold text-xs sm:text-sm cursor-pointer hover:text-primary transition-colors" onClick={() => navigate(`/profile/${comment.user_id}`)}>
                           {comment.profiles.full_name}
                         </span>
                         {comment.profiles.role && (

@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Send, MessageSquare, Calendar, ThumbsUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import PostMenu from '@/components/PostMenu';
 
 interface DiscussionDetail {
   id: string;
@@ -117,6 +118,60 @@ const DiscussionDetail = () => {
     }
   };
 
+  const handleEdit = () => {
+    navigate(`/post/${id}/edit`);
+  };
+
+  const handleHide = async () => {
+    try {
+      const { error } = await supabase
+        .from('ideas')
+        .update({ is_hidden: true })
+        .eq('id', id)
+        .eq('user_id', currentUser?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Post hidden',
+        description: 'Your post has been hidden successfully.',
+      });
+
+      navigate('/feed');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('ideas')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', currentUser?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Post deleted',
+        description: 'Your post has been permanently deleted.',
+      });
+
+      navigate('/feed');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !currentUser) return;
@@ -187,24 +242,34 @@ const DiscussionDetail = () => {
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-start gap-4">
-              <Avatar className="w-12 h-12 sm:w-14 sm:h-14">
+              <Avatar className="w-12 h-12 sm:w-14 sm:h-14 cursor-pointer" onClick={() => navigate(`/profile/${discussion.user_id}`)}>
                 <AvatarFallback className="bg-purple-500 text-white text-lg">
                   {discussion.profiles?.full_name?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant="secondary" className="bg-purple-100 text-purple-700">
-                    <MessageSquare className="w-3 h-3 mr-1" />
-                    Discussion
-                  </Badge>
-                  <Badge variant="outline" className="text-xs">
-                    {discussion.category}
-                  </Badge>
+                  <div className="flex items-center gap-2 flex-1 flex-wrap">
+                    <Badge variant="secondary" className="bg-purple-100 text-purple-700">
+                      <MessageSquare className="w-3 h-3 mr-1" />
+                      Discussion
+                    </Badge>
+                    <Badge variant="outline" className="text-xs">
+                      {discussion.category}
+                    </Badge>
+                  </div>
+                  {currentUser && discussion.user_id === currentUser.id && (
+                    <PostMenu
+                      postId={discussion.id}
+                      onEdit={handleEdit}
+                      onHide={handleHide}
+                      onDelete={handleDelete}
+                    />
+                  )}
                 </div>
                 <CardTitle className="text-xl sm:text-2xl mb-2">{discussion.title}</CardTitle>
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>Started by {discussion.profiles?.full_name}</span>
+                  <span>Started by <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => navigate(`/profile/${discussion.user_id}`)}>{discussion.profiles?.full_name}</span></span>
                   <span>•</span>
                   <div className="flex items-center gap-1">
                     <Calendar className="w-4 h-4" />
@@ -265,14 +330,14 @@ const DiscussionDetail = () => {
               ) : (
                 comments.map((comment) => (
                   <div key={comment.id} className="flex gap-3 p-4 rounded-lg bg-muted/30">
-                    <Avatar className="w-8 h-8">
+                    <Avatar className="w-8 h-8 cursor-pointer" onClick={() => navigate(`/profile/${comment.user_id}`)}>
                       <AvatarFallback className="text-xs">
                         {comment.profiles?.full_name?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-2">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">
+                        <span className="font-medium text-sm cursor-pointer hover:text-primary transition-colors" onClick={() => navigate(`/profile/${comment.user_id}`)}>
                           {comment.profiles?.full_name || 'Unknown User'}
                         </span>
                         {comment.profiles?.role && (

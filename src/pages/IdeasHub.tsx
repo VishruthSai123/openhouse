@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, TrendingUp, Clock, ArrowUpCircle, MessageSquare, ArrowLeft, Lightbulb, Home, Briefcase, Users, FolderKanban, MessageCircle, MapPin, DollarSign, Wifi } from 'lucide-react';
+import PostMenu from '@/components/PostMenu';
 
 interface Post {
   id: string;
@@ -93,6 +94,7 @@ const IdeasHub = () => {
           idea_votes (id),
           idea_comments (id)
         `)
+        .eq('is_hidden', false)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -205,10 +207,73 @@ const IdeasHub = () => {
     }
   };
 
+  const handleEditPost = (postId: string) => {
+    // Navigate to edit page based on post type
+    const post = posts.find(p => p.id === postId);
+    if (!post) return;
+    
+    // For now, navigate to the post detail page
+    // TODO: Create edit page/modal
+    navigate(`/post/${postId}/edit`);
+  };
+
+  const handleHidePost = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('ideas')
+        .update({ is_hidden: true })
+        .eq('id', postId)
+        .eq('user_id', currentUser.id); // Ensure user owns the post
+
+      if (error) throw error;
+
+      toast({
+        title: 'Post hidden',
+        description: 'Your post has been hidden successfully.',
+      });
+
+      // Remove from local state
+      setPosts(posts.filter(p => p.id !== postId));
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('ideas')
+        .delete()
+        .eq('id', postId)
+        .eq('user_id', currentUser.id); // Ensure user owns the post
+
+      if (error) throw error;
+
+      toast({
+        title: 'Post deleted',
+        description: 'Your post has been permanently deleted.',
+      });
+
+      // Remove from local state
+      setPosts(posts.filter(p => p.id !== postId));
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const renderPostCard = (post: Post) => {
     const isIdea = post.post_type === 'idea';
     const isJob = post.post_type === 'job_posting' || post.post_type === 'job_request';
     const isDiscussion = post.post_type === 'discussion';
+    const isOwnPost = currentUser && post.user_id === currentUser.id;
 
     return (
       <Card
@@ -218,22 +283,32 @@ const IdeasHub = () => {
       >
         <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-6 pb-2 sm:pb-3">
           <div className="flex items-start justify-between mb-2 gap-2">
-            <Badge variant="secondary" className="text-xs">{post.category}</Badge>
-            {isIdea && post.stage && (
-              <Badge variant="outline" className="text-xs whitespace-nowrap">
-                {stages[post.stage as keyof typeof stages]}
-              </Badge>
-            )}
-            {isJob && post.job_type && (
-              <Badge variant="outline" className="text-xs whitespace-nowrap">
-                {jobTypeLabels[post.job_type] || post.job_type}
-              </Badge>
-            )}
-            {isDiscussion && (
-              <Badge variant="outline" className="text-xs whitespace-nowrap bg-purple-100 text-purple-700">
-                <MessageCircle className="w-3 h-3 mr-1" />
-                Discussion
-              </Badge>
+            <div className="flex items-center gap-2 flex-wrap flex-1">
+              <Badge variant="secondary" className="text-xs">{post.category}</Badge>
+              {isIdea && post.stage && (
+                <Badge variant="outline" className="text-xs whitespace-nowrap">
+                  {stages[post.stage as keyof typeof stages]}
+                </Badge>
+              )}
+              {isJob && post.job_type && (
+                <Badge variant="outline" className="text-xs whitespace-nowrap">
+                  {jobTypeLabels[post.job_type] || post.job_type}
+                </Badge>
+              )}
+              {isDiscussion && (
+                <Badge variant="outline" className="text-xs whitespace-nowrap bg-purple-100 text-purple-700">
+                  <MessageCircle className="w-3 h-3 mr-1" />
+                  Discussion
+                </Badge>
+              )}
+            </div>
+            {isOwnPost && (
+              <PostMenu
+                postId={post.id}
+                onEdit={() => handleEditPost(post.id)}
+                onHide={() => handleHidePost(post.id)}
+                onDelete={() => handleDeletePost(post.id)}
+              />
             )}
           </div>
           <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors text-base sm:text-lg">

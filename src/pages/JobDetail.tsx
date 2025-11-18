@@ -10,6 +10,7 @@ import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Send, MapPin, DollarSign, Briefcase, Building2, Wifi, Calendar } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
+import PostMenu from '@/components/PostMenu';
 
 interface JobDetail {
   id: string;
@@ -132,6 +133,60 @@ const JobDetail = () => {
     }
   };
 
+  const handleEdit = () => {
+    navigate(`/post/${id}/edit`);
+  };
+
+  const handleHide = async () => {
+    try {
+      const { error } = await supabase
+        .from('ideas')
+        .update({ is_hidden: true })
+        .eq('id', id)
+        .eq('user_id', currentUser?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Post hidden',
+        description: 'Your post has been hidden successfully.',
+      });
+
+      navigate('/jobs');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      const { error } = await supabase
+        .from('ideas')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', currentUser?.id);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Post deleted',
+        description: 'Your post has been permanently deleted.',
+      });
+
+      navigate('/jobs');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !currentUser) return;
@@ -202,28 +257,38 @@ const JobDetail = () => {
         <Card className="mb-6">
           <CardHeader>
             <div className="flex items-start gap-4">
-              <Avatar className="w-12 h-12 sm:w-14 sm:h-14">
+              <Avatar className="w-12 h-12 sm:w-14 sm:h-14 cursor-pointer" onClick={() => navigate(`/profile/${job.user_id}`)}>
                 <AvatarFallback className={`text-lg ${job.post_type === 'job_request' ? 'bg-green-500 text-white' : 'bg-primary text-primary-foreground'}`}>
                   {job.profiles?.full_name?.charAt(0) || 'U'}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
-                  <Badge variant={job.post_type === 'job_request' ? 'default' : 'secondary'} className={`text-xs ${job.post_type === 'job_request' ? 'bg-green-500' : ''}`}>
-                    {job.post_type === 'job_request' ? 'Looking for Work' : jobTypeLabels[job.job_type] || job.job_type}
-                  </Badge>
-                  {job.is_remote && (
-                    <Badge variant="outline" className="text-xs">
-                      <Wifi className="w-3 h-3 mr-1" />
-                      Remote
+                  <div className="flex items-center gap-2 flex-1 flex-wrap">
+                    <Badge variant={job.post_type === 'job_request' ? 'default' : 'secondary'} className={`text-xs ${job.post_type === 'job_request' ? 'bg-green-500' : ''}`}>
+                      {job.post_type === 'job_request' ? 'Looking for Work' : jobTypeLabels[job.job_type] || job.job_type}
                     </Badge>
+                    {job.is_remote && (
+                      <Badge variant="outline" className="text-xs">
+                        <Wifi className="w-3 h-3 mr-1" />
+                        Remote
+                      </Badge>
+                    )}
+                  </div>
+                  {currentUser && job.user_id === currentUser.id && (
+                    <PostMenu
+                      postId={job.id}
+                      onEdit={handleEdit}
+                      onHide={handleHide}
+                      onDelete={handleDelete}
+                    />
                   )}
                 </div>
                 <CardTitle className="text-xl sm:text-2xl mb-2">{job.title}</CardTitle>
                 <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
                   {job.post_type === 'job_request' ? (
                     <div className="flex items-center gap-1">
-                      <span className="font-medium">{job.profiles?.full_name}</span>
+                      <span className="font-medium cursor-pointer hover:text-primary transition-colors" onClick={() => navigate(`/profile/${job.user_id}`)}>{job.profiles?.full_name}</span>
                       {job.profiles?.role && <span>• {job.profiles.role}</span>}
                     </div>
                   ) : (
@@ -281,13 +346,21 @@ const JobDetail = () => {
             {/* Posted By */}
             <div className="flex items-center gap-2 text-sm text-muted-foreground pt-4 border-t">
               <Calendar className="w-4 h-4" />
-              <span>Posted by {job.profiles?.full_name}</span>
+              <span>Posted by <span className="cursor-pointer hover:text-primary transition-colors" onClick={() => navigate(`/profile/${job.user_id}`)}>{job.profiles?.full_name}</span></span>
               <span>•</span>
               <span>{formatDistanceToNow(new Date(job.created_at), { addSuffix: true })}</span>
             </div>
 
             {/* Contact Button */}
-            <Button className="w-full" size="lg">
+            <Button 
+              className="w-full" 
+              size="lg"
+              onClick={() => {
+                const subject = encodeURIComponent(`Application for ${job.title}`);
+                const body = encodeURIComponent(`Hi ${job.profiles?.full_name},\n\nI'm interested in the ${job.post_type === 'job_request' ? 'opportunity to work with you' : job.title + ' position'}.\n\n`);
+                window.location.href = `mailto:${job.profiles?.email}?subject=${subject}&body=${body}`;
+              }}
+            >
               {job.post_type === 'job_request' ? 'Contact Candidate' : 'Apply for this Job'}
             </Button>
           </CardContent>
@@ -328,14 +401,14 @@ const JobDetail = () => {
               ) : (
                 comments.map((comment) => (
                   <div key={comment.id} className="flex gap-3">
-                    <Avatar className="w-8 h-8">
+                    <Avatar className="w-8 h-8 cursor-pointer" onClick={() => navigate(`/profile/${comment.user_id}`)}>
                       <AvatarFallback className="text-xs">
                         {comment.profiles?.full_name?.charAt(0) || 'U'}
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-medium text-sm">
+                        <span className="font-medium text-sm cursor-pointer hover:text-primary transition-colors" onClick={() => navigate(`/profile/${comment.user_id}`)}>
                           {comment.profiles?.full_name || 'Unknown User'}
                         </span>
                         {comment.profiles?.role && (
