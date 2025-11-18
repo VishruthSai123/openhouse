@@ -457,37 +457,3 @@ const IdeasHub = () => {
 };
 
 export default IdeasHub;
-                      </div>
-                      <span className="text-muted-foreground truncate">
-                        {idea.profiles.full_name}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">,
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleUpvote(idea.id, idea.upvotes);
-                        }}
-                        className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
-                      >
-                        <ArrowUpCircle className="w-4 h-4" />
-                        <span>{idea.upvotes}</span>
-                      </button>
-                      <div className="flex items-center gap-1 text-muted-foreground">
-                        <MessageSquare className="w-4 h-4" />
-                        <span>{idea.idea_comments?.length || 0}</span>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-export default IdeasHub;
