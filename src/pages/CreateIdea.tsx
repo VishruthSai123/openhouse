@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,19 +8,41 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, X, Plus } from 'lucide-react';
 
+type PostType = 'idea' | 'job_posting' | 'job_request' | 'discussion';
+
 const CreateIdea = () => {
+  const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [postType, setPostType] = useState<PostType>('idea');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [stage, setStage] = useState('idea');
   const [lookingFor, setLookingFor] = useState<string[]>([]);
   const [newTag, setNewTag] = useState('');
+  
+  // Job-specific fields
+  const [jobType, setJobType] = useState('');
+  const [location, setLocation] = useState('');
+  const [salaryRange, setSalaryRange] = useState('');
+  const [isRemote, setIsRemote] = useState(false);
+  const [companyName, setCompanyName] = useState('');
+  const [skillsRequired, setSkillsRequired] = useState<string[]>([]);
+  const [newSkill, setNewSkill] = useState('');
+  
   const navigate = useNavigate();
   const { toast } = useToast();
+
+  useEffect(() => {
+    const type = searchParams.get('type') as PostType;
+    if (type && ['idea', 'job_posting', 'job_request', 'discussion'].includes(type)) {
+      setPostType(type);
+    }
+  }, [searchParams]);
 
   const categories = [
     'SaaS',
@@ -66,6 +88,52 @@ const CreateIdea = () => {
     setLookingFor(lookingFor.filter(t => t !== tag));
   };
 
+  const addSkill = () => {
+    if (newSkill.trim() && !skillsRequired.includes(newSkill.trim())) {
+      setSkillsRequired([...skillsRequired, newSkill.trim()]);
+      setNewSkill('');
+    }
+  };
+
+  const removeSkill = (skillToRemove: string) => {
+    setSkillsRequired(skillsRequired.filter(skill => skill !== skillToRemove));
+  };
+
+  const getPostConfig = () => {
+    switch (postType) {
+      case 'job_posting':
+        return {
+          title: 'Post a Job',
+          description: 'Share your job opening with the community',
+          buttonText: 'Post Job',
+          coinReward: 15
+        };
+      case 'job_request':
+        return {
+          title: 'Request a Job',
+          description: 'Let companies know you\'re looking for opportunities',
+          buttonText: 'Post Request',
+          coinReward: 10
+        };
+      case 'discussion':
+        return {
+          title: 'Start a Discussion',
+          description: 'Engage with the community on important topics',
+          buttonText: 'Start Discussion',
+          coinReward: 5
+        };
+      default:
+        return {
+          title: 'Share Your Idea',
+          description: 'Present your innovative concept to the community',
+          buttonText: 'Post Idea',
+          coinReward: 20
+        };
+    }
+  };
+
+  const config = getPostConfig();
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -78,34 +146,63 @@ const CreateIdea = () => {
       return;
     }
 
+    // Job-specific validation
+    if (postType === 'job_posting' || postType === 'job_request') {
+      if (!jobType || !location) {
+        toast({
+          title: 'Missing Job Information',
+          description: 'Please fill in job type and location',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('Not authenticated');
 
+      // Prepare the data object
+      const ideaData: any = {
+        user_id: user.id,
+        title: title.trim(),
+        description: description.trim(),
+        category,
+        post_type: postType,
+      };
+
+      // Add idea-specific fields
+      if (postType === 'idea') {
+        ideaData.stage = stage;
+        ideaData.looking_for = lookingFor;
+      }
+
+      // Add job-specific fields
+      if (postType === 'job_posting' || postType === 'job_request') {
+        ideaData.job_type = jobType;
+        ideaData.location = location;
+        ideaData.salary_range = salaryRange || null;
+        ideaData.skills_required = skillsRequired.length > 0 ? skillsRequired : null;
+        ideaData.is_remote = isRemote;
+        ideaData.company_name = companyName || null;
+      }
+
       const { data, error } = await supabase
         .from('ideas')
-        .insert({
-          user_id: user.id,
-          title: title.trim(),
-          description: description.trim(),
-          category,
-          stage,
-          looking_for: lookingFor.length > 0 ? lookingFor : null,
-          upvotes: 0
-        })
+        .insert(ideaData)
         .select()
         .single();
 
       if (error) throw error;
 
-      // Award coins for posting idea
+      // Award coins for posting
       await supabase
         .from('coin_transactions')
         .insert({
           user_id: user.id,
-          amount: 10,
+          amount: config.coinReward,
           reason: 'Posted new idea',
           reference_type: 'idea',
           reference_id: data.id
@@ -120,16 +217,21 @@ const CreateIdea = () => {
       if (profile) {
         await supabase
           .from('profiles')
-          .update({ builder_coins: (profile.builder_coins || 0) + 10 })
+          .update({ builder_coins: (profile.builder_coins || 0) + config.coinReward })
           .eq('id', user.id);
       }
 
       toast({
         title: 'Success! 🎉',
-        description: 'Your idea has been posted. +10 Builder Coins!',
+        description: `Your ${postType.replace('_', ' ')} has been posted. +${config.coinReward} Builder Coins!`,
       });
 
-      navigate(`/ideas/${data.id}`);
+      // Navigate based on post type
+      if (postType === 'job_posting' || postType === 'job_request') {
+        navigate('/jobs');
+      } else {
+        navigate(`/ideas/${data.id}`);
+      }
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -147,183 +249,255 @@ const CreateIdea = () => {
         <div className="sticky top-0 z-10 bg-background pt-4 pb-3 sm:pt-8 sm:pb-4">
           <Button
             variant="ghost"
-            onClick={() => navigate('/ideas')}
+            onClick={() => navigate(-1)}
             className="h-9 sm:h-10"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
-            Back to Ideas
+            Back
           </Button>
         </div>
 
-        <div className="overflow-y-auto max-h-[calc(100vh-140px)] md:max-h-none pb-4">
-          <Card>
-            <CardHeader className="px-4 sm:px-6 pt-4 sm:pt-6">
-              <CardTitle className="text-lg sm:text-2xl">Post Your Startup Idea 💡</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">
-                Share your idea with the community and find co-founders, collaborators, or get feedback
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="px-4 sm:px-6">
-              <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-                {/* Title */}
-                <div className="space-y-2">
-                  <Label htmlFor="title" className="text-sm">Idea Title *</Label>
-                  <Input
-                    id="title"
-                    placeholder="E.g., AI-powered study assistant for college students"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    maxLength={100}
-                    className="h-10 sm:h-10 text-sm"
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {title.length}/100 characters
-                  </p>
-                </div>
+        <Card className="border-border">
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="text-xl sm:text-2xl">{config.title}</CardTitle>
+            <CardDescription className="text-sm sm:text-base">{config.description}</CardDescription>
+          </CardHeader>
+          <CardContent className="px-4 sm:px-6">
+            <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="title" className="text-sm sm:text-base">
+                  Title <span className="text-destructive">*</span>
+                </Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder={postType === 'job_posting' ? "e.g., Senior Full Stack Developer" : postType === 'job_request' ? "e.g., Looking for React Developer Role" : "Give your idea a catchy title"}
+                  required
+                  className="h-10 sm:h-11 text-sm sm:text-base"
+                />
+              </div>
 
-                {/* Description */}
-                <div className="space-y-2">
-                  <Label htmlFor="description" className="text-sm">Description *</Label>
-                  <Textarea
-                    id="description"
-                    placeholder="Describe your idea, the problem it solves, and your vision..."
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                    rows={6}
-                    className="text-sm min-h-[120px] sm:min-h-[140px] resize-none"
-                    maxLength={1000}
-                    required
-                  />
-                  <p className="text-xs text-muted-foreground">
-                    {description.length}/1000 characters
-                  </p>
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="description" className="text-sm sm:text-base">
+                  Description <span className="text-destructive">*</span>
+                </Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder={postType === 'discussion' ? "What would you like to discuss?" : "Describe in detail..."}
+                  required
+                  rows={6}
+                  className="resize-none text-sm sm:text-base"
+                />
+              </div>
 
-                {/* Category & Stage */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="category" className="text-sm sm:text-base">
+                  Category <span className="text-destructive">*</span>
+                </Label>
+                <Select value={category} onValueChange={setCategory} required>
+                  <SelectTrigger id="category" className="h-10 sm:h-11 text-sm sm:text-base">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((cat) => (
+                      <SelectItem key={cat} value={cat.toLowerCase()} className="text-sm sm:text-base">
+                        {cat}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Conditional rendering based on post type */}
+              {postType === 'idea' && (
+                <>
                   <div className="space-y-2">
-                    <Label htmlFor="category" className="text-sm">Category *</Label>
-                    <Select value={category} onValueChange={setCategory} required>
-                      <SelectTrigger className="h-10 sm:h-10 text-sm">
-                        <SelectValue placeholder="Select category" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {categories.map(cat => (
-                          <SelectItem key={cat} value={cat} className="text-sm">
-                            {cat}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="stage" className="text-sm">Current Stage *</Label>
+                    <Label htmlFor="stage" className="text-sm sm:text-base">
+                      Current Stage <span className="text-destructive">*</span>
+                    </Label>
                     <Select value={stage} onValueChange={setStage} required>
-                      <SelectTrigger className="h-10 sm:h-10 text-sm">
+                      <SelectTrigger id="stage" className="h-10 sm:h-11 text-sm sm:text-base">
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
                         {stages.map(s => (
-                          <SelectItem key={s.value} value={s.value} className="text-sm">
+                          <SelectItem key={s.value} value={s.value} className="text-sm sm:text-base">
                             {s.label}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                </div>
 
-                {/* Looking For */}
-                <div className="space-y-2">
-                  <Label className="text-sm">Looking For (Optional)</Label>
-                  <p className="text-xs sm:text-sm text-muted-foreground mb-2">
-                    What kind of people or skills are you looking for?
-                  </p>
-                  
-                  {/* Quick Select Roles */}
-                  <div className="flex flex-wrap gap-2 mb-3 max-h-[180px] overflow-y-auto">
-                    {suggestedRoles.map(role => (
-                      <Badge
-                        key={role}
-                        variant={lookingFor.includes(role) ? "default" : "outline"}
-                        className="cursor-pointer text-xs h-7 px-3"
-                        onClick={() => lookingFor.includes(role) ? removeTag(role) : addTag(role)}
-                      >
-                        {role}
-                        {lookingFor.includes(role) && <X className="w-3 h-3 ml-1.5" />}
-                      </Badge>
-                    ))}
-                  </div>
-
-                  {/* Custom Tag Input */}
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="Add custom role or skill..."
-                      value={newTag}
-                      onChange={(e) => setNewTag(e.target.value)}
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          addTag(newTag);
-                        }
-                      }}
-                      className="h-10 text-sm"
-                      maxLength={30}
-                    />
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => addTag(newTag)}
-                      disabled={!newTag.trim() || lookingFor.length >= 10}
-                      className="h-10 w-10 p-0 flex-shrink-0"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </Button>
-                  </div>
-
-                  {/* Selected Tags */}
-                  {lookingFor.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-3 p-3 bg-secondary/20 rounded-lg max-h-[120px] overflow-y-auto">
-                      {lookingFor.map(tag => (
-                        <Badge key={tag} variant="secondary" className="text-xs h-7 px-3">
-                          {tag}
-                          <X
-                            className="w-3 h-3 ml-1.5 cursor-pointer"
-                            onClick={() => removeTag(tag)}
-                          />
+                  <div className="space-y-2">
+                    <Label className="text-sm sm:text-base">Looking For (Optional)</Label>
+                    <p className="text-xs sm:text-sm text-muted-foreground mb-2">
+                      What kind of people or skills are you looking for?
+                    </p>
+                    
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {suggestedRoles.map(role => (
+                        <Badge
+                          key={role}
+                          variant={lookingFor.includes(role) ? "default" : "outline"}
+                          className="cursor-pointer text-xs h-7 px-3"
+                          onClick={() => lookingFor.includes(role) ? removeTag(role) : addTag(role)}
+                        >
+                          {role}
+                          {lookingFor.includes(role) && <X className="w-3 h-3 ml-1.5" />}
                         </Badge>
                       ))}
                     </div>
-                  )}
-                </div>
 
-                {/* Submit */}
-                <div className="flex flex-col sm:flex-row gap-3 pt-2">
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="h-12 sm:h-11 text-sm sm:text-base font-medium"
-                    disabled={loading}
-                  >
-                    {loading ? 'Posting...' : 'Post Idea (+10 Coins)'}
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="lg"
-                    className="h-12 sm:h-11 text-sm sm:text-base"
-                    onClick={() => navigate('/ideas')}
-                    disabled={loading}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
-        </div>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add custom role or skill..."
+                        value={newTag}
+                        onChange={(e) => setNewTag(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addTag(newTag);
+                          }
+                        }}
+                        className="h-9 sm:h-10 text-sm"
+                      />
+                      <Button type="button" onClick={() => addTag(newTag)} size="sm" className="h-9 sm:h-10">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    {lookingFor.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {lookingFor.map(tag => (
+                          <Badge key={tag} variant="secondary" className="text-xs h-7 px-3">
+                            {tag}
+                            <X className="w-3 h-3 ml-1.5 cursor-pointer" onClick={() => removeTag(tag)} />
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              {(postType === 'job_posting' || postType === 'job_request') && (
+                <>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="jobType" className="text-sm sm:text-base">
+                        Job Type <span className="text-destructive">*</span>
+                      </Label>
+                      <Select value={jobType} onValueChange={setJobType} required>
+                        <SelectTrigger id="jobType" className="h-10 sm:h-11 text-sm sm:text-base">
+                          <SelectValue placeholder="Select type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="full-time">Full-time</SelectItem>
+                          <SelectItem value="part-time">Part-time</SelectItem>
+                          <SelectItem value="contract">Contract</SelectItem>
+                          <SelectItem value="internship">Internship</SelectItem>
+                          <SelectItem value="freelance">Freelance</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="location" className="text-sm sm:text-base">
+                        Location <span className="text-destructive">*</span>
+                      </Label>
+                      <Input
+                        id="location"
+                        value={location}
+                        onChange={(e) => setLocation(e.target.value)}
+                        placeholder="e.g., San Francisco, CA"
+                        required
+                        className="h-10 sm:h-11 text-sm sm:text-base"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="companyName" className="text-sm sm:text-base">
+                      Company Name {postType === 'job_posting' && <span className="text-destructive">*</span>}
+                    </Label>
+                    <Input
+                      id="companyName"
+                      value={companyName}
+                      onChange={(e) => setCompanyName(e.target.value)}
+                      placeholder="Your company name"
+                      required={postType === 'job_posting'}
+                      className="h-10 sm:h-11 text-sm sm:text-base"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="salaryRange" className="text-sm sm:text-base">
+                      Salary Range (Optional)
+                    </Label>
+                    <Input
+                      id="salaryRange"
+                      value={salaryRange}
+                      onChange={(e) => setSalaryRange(e.target.value)}
+                      placeholder="e.g., $80k - $120k"
+                      className="h-10 sm:h-11 text-sm sm:text-base"
+                    />
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Switch
+                      id="isRemote"
+                      checked={isRemote}
+                      onCheckedChange={setIsRemote}
+                    />
+                    <Label htmlFor="isRemote" className="text-sm sm:text-base cursor-pointer">
+                      Remote position
+                    </Label>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-sm sm:text-base">Skills Required</Label>
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add a skill..."
+                        value={newSkill}
+                        onChange={(e) => setNewSkill(e.target.value)}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addSkill();
+                          }
+                        }}
+                        className="h-9 sm:h-10 text-sm"
+                      />
+                      <Button type="button" onClick={addSkill} size="sm" className="h-9 sm:h-10">
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    {skillsRequired.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {skillsRequired.map(skill => (
+                          <Badge key={skill} variant="secondary" className="text-xs h-7 px-3">
+                            {skill}
+                            <X className="w-3 h-3 ml-1.5 cursor-pointer" onClick={() => removeSkill(skill)} />
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </>
+              )}
+
+              <Button type="submit" disabled={loading} className="w-full h-10 sm:h-11">
+                {loading ? 'Posting...' : config.buttonText}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

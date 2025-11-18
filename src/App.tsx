@@ -27,6 +27,7 @@ import Connections from "./pages/Connections";
 import Profile from "./pages/Profile";
 import IdeaValidator from "./pages/IdeaValidator";
 import IdeaValidatorHistory from "./pages/IdeaValidatorHistory";
+import Jobs from "./pages/Jobs";
 import MobileBottomNav from "./components/MobileBottomNav";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -57,6 +58,7 @@ const App = () => (
             <Route path="/idea-validator" element={<IdeaValidator />} />
             <Route path="/idea-validator-history" element={<IdeaValidatorHistory />} />
             <Route path="/find-team" element={<FindTeam />} />
+            <Route path="/jobs" element={<Jobs />} />
             <Route path="/projects" element={<Projects />} />
             <Route path="/projects/new" element={<CreateProject />} />
             <Route path="/projects/:id" element={<ProjectDetail />} />
