@@ -13,6 +13,9 @@ import NotFound from "./pages/NotFound";
 import IdeasHub from "./pages/IdeasHub";
 import CreateIdea from "./pages/CreateIdea";
 import IdeaDetail from "./pages/IdeaDetail";
+import PostDetailRouter from "./pages/PostDetail.router";
+import JobDetail from "./pages/JobDetail";
+import DiscussionDetail from "./pages/DiscussionDetail";
 import FindTeam from "./pages/FindTeam";
 import Projects from "./pages/Projects";
 import CreateProject from "./pages/CreateProject";
@@ -55,6 +58,7 @@ const App = () => (
             <Route path="/ideas" element={<IdeasHub />} />
             <Route path="/ideas/new" element={<CreateIdea />} />
             <Route path="/ideas/:id" element={<IdeaDetail />} />
+            <Route path="/post/:id" element={<PostDetailRouter />} />
             <Route path="/idea-validator" element={<IdeaValidator />} />
             <Route path="/idea-validator-history" element={<IdeaValidatorHistory />} />
             <Route path="/find-team" element={<FindTeam />} />

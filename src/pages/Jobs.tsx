@@ -147,7 +147,7 @@ const Jobs = () => {
     <Card
       key={job.id}
       className="hover:border-primary/50 transition-colors cursor-pointer"
-      onClick={() => navigate(`/ideas/${job.id}`)}
+      onClick={() => navigate(`/post/${job.id}`)}
     >
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3">

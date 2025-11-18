@@ -7,15 +7,22 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, TrendingUp, Clock, ArrowUpCircle, MessageSquare, ArrowLeft, Lightbulb, Home } from 'lucide-react';
+import { Plus, Search, TrendingUp, Clock, ArrowUpCircle, MessageSquare, ArrowLeft, Lightbulb, Home, Briefcase, Users, FolderKanban, MessageCircle, MapPin, DollarSign, Wifi } from 'lucide-react';
 
-interface Idea {
+interface Post {
   id: string;
   title: string;
   description: string;
   category: string;
-  stage: string;
-  looking_for: string[] | null;
+  post_type: string;
+  stage?: string;
+  looking_for?: string[] | null;
+  job_type?: string;
+  location?: string;
+  salary_range?: string | null;
+  skills_required?: string[] | null;
+  is_remote?: boolean;
+  company_name?: string | null;
   upvotes: number;
   created_at: string;
   user_id: string;
@@ -29,27 +36,14 @@ interface Idea {
 }
 
 const IdeasHub = () => {
-  const [ideas, setIdeas] = useState<Idea[]>([]);
-  const [filteredIdeas, setFilteredIdeas] = useState<Idea[]>([]);
+  const [posts, setPosts] = useState<Post[]>([]);
+  const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedTab, setSelectedTab] = useState('all');
   const [currentUser, setCurrentUser] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
-
-  const categories = [
-    'all',
-    'SaaS',
-    'E-commerce',
-    'EdTech',
-    'HealthTech',
-    'FinTech',
-    'Social',
-    'Gaming',
-    'AI/ML',
-    'Other'
-  ];
 
   const stages = {
     'idea': '💡 Idea',
@@ -59,14 +53,22 @@ const IdeasHub = () => {
     'launched': '✨ Launched'
   };
 
+  const jobTypeLabels: { [key: string]: string } = {
+    'full-time': 'Full-time',
+    'part-time': 'Part-time',
+    'contract': 'Contract',
+    'internship': 'Internship',
+    'freelance': 'Freelance',
+  };
+
   useEffect(() => {
     checkAuth();
-    loadIdeas();
+    loadPosts();
   }, []);
 
   useEffect(() => {
-    filterIdeas();
-  }, [searchQuery, selectedCategory, ideas]);
+    filterPosts();
+  }, [searchQuery, selectedTab, posts]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -77,7 +79,7 @@ const IdeasHub = () => {
     setCurrentUser(user);
   };
 
-  const loadIdeas = async () => {
+  const loadPosts = async () => {
     try {
       const { data, error } = await supabase
         .from('ideas')
@@ -94,7 +96,7 @@ const IdeasHub = () => {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setIdeas(data || []);
+      setPosts(data || []);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -106,21 +108,47 @@ const IdeasHub = () => {
     }
   };
 
-  const filterIdeas = () => {
-    let filtered = ideas;
+  const filterPosts = () => {
+    let filtered = posts;
 
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(idea => idea.category === selectedCategory);
+    // Filter by tab
+    if (selectedTab !== 'all') {
+      if (selectedTab === 'co-founders') {
+        // Co-founders are ideas where looking_for includes founder-related roles
+        filtered = filtered.filter(post => 
+          post.post_type === 'idea' && 
+          post.looking_for?.some(role => 
+            role.toLowerCase().includes('founder') || 
+            role.toLowerCase().includes('co-founder')
+          )
+        );
+      } else if (selectedTab === 'jobs') {
+        filtered = filtered.filter(post => 
+          post.post_type === 'job_posting' || post.post_type === 'job_request'
+        );
+      } else if (selectedTab === 'projects') {
+        // Projects are ideas in building/mvp/launched stages
+        filtered = filtered.filter(post => 
+          post.post_type === 'idea' && 
+          (post.stage === 'building' || post.stage === 'mvp' || post.stage === 'launched')
+        );
+      } else {
+        filtered = filtered.filter(post => post.post_type === selectedTab);
+      }
     }
 
+    // Filter by search query
     if (searchQuery) {
-      filtered = filtered.filter(idea =>
-        idea.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        idea.description.toLowerCase().includes(searchQuery.toLowerCase())
+      filtered = filtered.filter(post =>
+        post.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.location?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        post.company_name?.toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
 
-    setFilteredIdeas(filtered);
+    setFilteredPosts(filtered);
   };
 
   const handleUpvote = async (ideaId: string, currentVotes: number) => {
@@ -158,16 +186,16 @@ const IdeasHub = () => {
           .eq('id', ideaId);
 
         // Award coins to idea creator
-        const idea = ideas.find(i => i.id === ideaId);
-        if (idea && idea.user_id !== currentUser.id) {
-          await awardCoins(idea.user_id, 1, 'Upvote received on idea');
+        const post = posts.find(i => i.id === ideaId);
+        if (post && post.user_id !== currentUser.id) {
+          await awardCoins(post.user_id, 1, 'Upvote received on idea');
         }
 
         // Award coins to voter
         await awardCoins(currentUser.id, 1, 'Voted on idea');
       }
 
-      loadIdeas();
+      loadPosts();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -175,6 +203,133 @@ const IdeasHub = () => {
         variant: 'destructive',
       });
     }
+  };
+
+  const renderPostCard = (post: Post) => {
+    const isIdea = post.post_type === 'idea';
+    const isJob = post.post_type === 'job_posting' || post.post_type === 'job_request';
+    const isDiscussion = post.post_type === 'discussion';
+
+    return (
+      <Card
+        key={post.id}
+        className="hover:shadow-lg transition-shadow cursor-pointer group"
+        onClick={() => navigate(`/post/${post.id}`)}
+      >
+        <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-6 pb-2 sm:pb-3">
+          <div className="flex items-start justify-between mb-2 gap-2">
+            <Badge variant="secondary" className="text-xs">{post.category}</Badge>
+            {isIdea && post.stage && (
+              <Badge variant="outline" className="text-xs whitespace-nowrap">
+                {stages[post.stage as keyof typeof stages]}
+              </Badge>
+            )}
+            {isJob && post.job_type && (
+              <Badge variant="outline" className="text-xs whitespace-nowrap">
+                {jobTypeLabels[post.job_type] || post.job_type}
+              </Badge>
+            )}
+            {isDiscussion && (
+              <Badge variant="outline" className="text-xs whitespace-nowrap bg-purple-100 text-purple-700">
+                <MessageCircle className="w-3 h-3 mr-1" />
+                Discussion
+              </Badge>
+            )}
+          </div>
+          <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors text-base sm:text-lg">
+            {post.title}
+          </CardTitle>
+          <CardDescription className="line-clamp-3 text-xs sm:text-sm">
+            {post.description}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+          {/* Job-specific info */}
+          {isJob && (
+            <div className="space-y-2 mb-3">
+              {post.location && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <MapPin className="w-3 h-3" />
+                  <span>{post.location}</span>
+                  {post.is_remote && <Badge variant="outline" className="text-xs ml-1">Remote</Badge>}
+                </div>
+              )}
+              {post.salary_range && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <DollarSign className="w-3 h-3" />
+                  <span>{post.salary_range}</span>
+                </div>
+              )}
+              {post.company_name && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Briefcase className="w-3 h-3" />
+                  <span>{post.company_name}</span>
+                </div>
+              )}
+              {post.skills_required && post.skills_required.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {post.skills_required.slice(0, 3).map((skill, idx) => (
+                    <Badge key={idx} variant="outline" className="text-xs">
+                      {skill}
+                    </Badge>
+                  ))}
+                  {post.skills_required.length > 3 && (
+                    <Badge variant="outline" className="text-xs">
+                      +{post.skills_required.length - 3}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Idea-specific info */}
+          {isIdea && post.looking_for && post.looking_for.length > 0 && (
+            <div className="flex flex-wrap gap-1 mb-3 sm:mb-4">
+              {post.looking_for.slice(0, 3).map((tag, idx) => (
+                <Badge key={idx} variant="outline" className="text-xs">
+                  {tag}
+                </Badge>
+              ))}
+              {post.looking_for.length > 3 && (
+                <Badge variant="outline" className="text-xs">
+                  +{post.looking_for.length - 3}
+                </Badge>
+              )}
+            </div>
+          )}
+
+          {/* Author & Stats */}
+          <div className="flex items-center justify-between text-xs sm:text-sm">
+            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
+              <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold flex-shrink-0">
+                {post.profiles.full_name?.charAt(0) || '?'}
+              </div>
+              <span className="text-muted-foreground truncate">
+                {post.profiles.full_name}
+              </span>
+            </div>
+
+            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleUpvote(post.id, post.upvotes);
+                }}
+                className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <ArrowUpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>{post.upvotes}</span>
+              </button>
+              <div className="flex items-center gap-1 text-muted-foreground">
+                <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span>{post.idea_comments?.length || 0}</span>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   const awardCoins = async (userId: string, amount: number, reason: string) => {
@@ -210,7 +365,7 @@ const IdeasHub = () => {
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-pulse text-muted-foreground">Loading ideas...</div>
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
       </div>
     );
   }
@@ -224,102 +379,84 @@ const IdeasHub = () => {
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <div className="flex items-center gap-2">
-            <Lightbulb className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
-            <h1 className="text-base sm:text-xl font-bold">Idea Hub</h1>
+            <Search className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+            <h1 className="text-base sm:text-xl font-bold">Explore</h1>
           </div>
         </div>
       </header>
 
       <div className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-0 mb-4 sm:mb-6">
-          <div>
-            <p className="text-xs sm:text-sm text-muted-foreground">
-              Discover amazing startup ideas and connect with founders
-            </p>
-          </div>
-          <Button onClick={() => navigate('/ideas/new')} size="sm" className="sm:size-lg w-full sm:w-auto">
-            <Plus className="w-4 h-4 mr-2" />
-            Post Your Idea
-          </Button>
+        <div className="mb-4 sm:mb-6">
+          <p className="text-xs sm:text-sm text-muted-foreground">
+            Discover ideas, jobs, co-founders, projects, and discussions
+          </p>
         </div>
 
         {/* Search */}
-        <div className="relative">
+        <div className="relative mb-4">
           <Search className="absolute left-3 top-2.5 sm:top-3 w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted-foreground" />
           <Input
-            placeholder="Search ideas..."
+            placeholder="Search everything..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 sm:pl-10 h-9 sm:h-10 text-sm"
           />
         </div>
 
-        {/* Category Tabs */}
-        <Tabs defaultValue="all" className="mb-6 sm:mb-8 mt-4 sm:mt-6" onValueChange={setSelectedCategory}>
+        {/* Tabs for post types */}
+        <Tabs value={selectedTab} onValueChange={setSelectedTab} className="mb-6 sm:mb-8 mt-4 sm:mt-6">
           <div className="overflow-x-auto -mx-3 sm:mx-0 px-3 sm:px-0">
             <TabsList className="inline-flex w-max sm:w-auto flex-nowrap sm:flex-wrap h-auto">
-              {categories.map(cat => (
-                <TabsTrigger key={cat} value={cat} className="capitalize text-xs sm:text-sm whitespace-nowrap">
-                  {cat}
-                </TabsTrigger>
-              ))}
+              <TabsTrigger value="all" className="text-xs sm:text-sm whitespace-nowrap">
+                <Search className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                All
+              </TabsTrigger>
+              <TabsTrigger value="idea" className="text-xs sm:text-sm whitespace-nowrap">
+                <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                Ideas
+              </TabsTrigger>
+              <TabsTrigger value="jobs" className="text-xs sm:text-sm whitespace-nowrap">
+                <Briefcase className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                Jobs
+              </TabsTrigger>
+              <TabsTrigger value="co-founders" className="text-xs sm:text-sm whitespace-nowrap">
+                <Users className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                Co-Founders
+              </TabsTrigger>
+              <TabsTrigger value="projects" className="text-xs sm:text-sm whitespace-nowrap">
+                <FolderKanban className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                Projects
+              </TabsTrigger>
+              <TabsTrigger value="discussion" className="text-xs sm:text-sm whitespace-nowrap">
+                <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4 mr-1.5" />
+                Discussions
+              </TabsTrigger>
             </TabsList>
           </div>
         </Tabs>
 
-        {/* Ideas Grid */}
-        {filteredIdeas.length === 0 ? (
+        {/* Posts Grid */}
+        {filteredPosts.length === 0 ? (
           <Card className="text-center py-12">
             <CardContent>
-              <p className="text-muted-foreground">No ideas found. Be the first to post!</p>
-              <Button onClick={() => navigate('/ideas/new')} className="mt-4">
-                <Plus className="w-4 h-4 mr-2" />
-                Post an Idea
-              </Button>
+              <p className="text-muted-foreground">
+                {searchQuery 
+                  ? 'No results found. Try a different search term.' 
+                  : 'No posts found in this category.'}
+              </p>
             </CardContent>
           </Card>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-            {filteredIdeas.map(idea => (
-              <Card
-                key={idea.id}
-                className="hover:shadow-lg transition-shadow cursor-pointer group"
-                onClick={() => navigate(`/ideas/${idea.id}`)}
-              >
-                <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-6 pb-2 sm:pb-3">
-                  <div className="flex items-start justify-between mb-2 gap-2">
-                    <Badge variant="secondary" className="text-xs">{idea.category}</Badge>
-                    <Badge variant="outline" className="text-xs whitespace-nowrap">{stages[idea.stage as keyof typeof stages]}</Badge>
-                  </div>
-                  <CardTitle className="line-clamp-2 group-hover:text-primary transition-colors text-base sm:text-lg">
-                    {idea.title}
-                  </CardTitle>
-                  <CardDescription className="line-clamp-3 text-xs sm:text-sm">
-                    {idea.description}
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
-                  {/* Looking For Tags */}
-                  {idea.looking_for && idea.looking_for.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3 sm:mb-4">
-                      {idea.looking_for.slice(0, 3).map((tag, idx) => (
-                        <Badge key={idx} variant="outline" className="text-xs">
-                          {tag}
-                        </Badge>
-                      ))}
-                      {idea.looking_for.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{idea.looking_for.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
+            {filteredPosts.map(post => renderPostCard(post))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
 
-                  {/* Author & Stats */}
-                  <div className="flex items-center justify-between text-xs sm:text-sm">
-                    <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                      <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-semibold flex-shrink-0">
-                        {idea.profiles.full_name?.charAt(0) || '?'}
+export default IdeasHub;
                       </div>
                       <span className="text-muted-foreground truncate">
                         {idea.profiles.full_name}

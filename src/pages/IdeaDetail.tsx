@@ -91,6 +91,7 @@ const IdeaDetail = () => {
           )
         `)
         .eq('id', id)
+        .eq('post_type', 'idea')
         .single();
 
       if (error) throw error;
