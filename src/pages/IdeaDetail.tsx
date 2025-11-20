@@ -22,6 +22,7 @@ interface IdeaDetail {
   upvotes: number;
   created_at: string;
   user_id: string;
+  is_hidden?: boolean;
   profiles: {
     full_name: string;
     avatar_url: string | null;
@@ -237,20 +238,24 @@ const IdeaDetail = () => {
 
   const handleHide = async () => {
     try {
+      const newHiddenState = !idea?.is_hidden;
       const { error } = await supabase
         .from('ideas')
-        .update({ is_hidden: true })
+        .update({ is_hidden: newHiddenState })
         .eq('id', id)
         .eq('user_id', currentUser?.id);
 
       if (error) throw error;
 
       toast({
-        title: 'Post hidden',
-        description: 'Your post has been hidden successfully.',
+        title: newHiddenState ? 'Post hidden' : 'Post unhidden',
+        description: newHiddenState 
+          ? 'Your post has been hidden successfully.'
+          : 'Your post is now visible to everyone.',
       });
 
-      navigate('/ideas');
+      // Reload the idea
+      loadIdea();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -350,6 +355,7 @@ const IdeaDetail = () => {
                   onEdit={handleEdit}
                   onHide={handleHide}
                   onDelete={handleDelete}
+                  isHidden={idea.is_hidden || false}
                 />
               )}
             </div>

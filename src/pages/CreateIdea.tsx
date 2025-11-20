@@ -65,23 +65,24 @@ const CreateIdea = () => {
       if (error) throw error;
 
       // Populate form with existing data
-      setPostType(data.post_type);
-      setTitle(data.title);
-      setDescription(data.description);
-      setCategory(data.category);
+      const postData = data as any;
+      setPostType(postData.post_type);
+      setTitle(postData.title);
+      setDescription(postData.description);
+      setCategory(postData.category);
       
-      if (data.post_type === 'idea') {
-        setStage(data.stage || 'idea');
-        setLookingFor(data.looking_for || []);
+      if (postData.post_type === 'idea') {
+        setStage(postData.stage || 'idea');
+        setLookingFor(postData.looking_for || []);
       }
       
-      if (data.post_type === 'job_posting' || data.post_type === 'job_request') {
-        setJobType(data.job_type || '');
-        setLocation(data.location || '');
-        setSalaryRange(data.salary_range || '');
-        setIsRemote(data.is_remote || false);
-        setCompanyName(data.company_name || '');
-        setSkillsRequired(data.skills_required || []);
+      if (postData.post_type === 'job_posting' || postData.post_type === 'job_request') {
+        setJobType(postData.job_type || '');
+        setLocation(postData.location || '');
+        setSalaryRange(postData.salary_range || '');
+        setIsRemote(postData.is_remote || false);
+        setCompanyName(postData.company_name || '');
+        setSkillsRequired(postData.skills_required || []);
       }
     } catch (error: any) {
       toast({

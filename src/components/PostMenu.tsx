@@ -1,5 +1,5 @@
 import React from 'react';
-import { MoreVertical, Edit, EyeOff, Trash2 } from 'lucide-react';
+import { MoreVertical, Edit, EyeOff, Eye, Trash2 } from 'lucide-react';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,12 +21,13 @@ import { Button } from '@/components/ui/button';
 
 interface PostMenuProps {
   postId: string;
+  isHidden?: boolean;
   onEdit?: () => void;
   onHide?: () => void;
   onDelete?: () => void;
 }
 
-const PostMenu: React.FC<PostMenuProps> = ({ postId, onEdit, onHide, onDelete }) => {
+const PostMenu: React.FC<PostMenuProps> = ({ postId, isHidden = false, onEdit, onHide, onDelete }) => {
   const [showDeleteDialog, setShowDeleteDialog] = React.useState(false);
 
   const handleEdit = (e: React.MouseEvent) => {
@@ -71,8 +72,17 @@ const PostMenu: React.FC<PostMenuProps> = ({ postId, onEdit, onHide, onDelete })
           )}
           {onHide && (
             <DropdownMenuItem onClick={handleHide}>
-              <EyeOff className="mr-2 h-4 w-4" />
-              <span>Hide</span>
+              {isHidden ? (
+                <>
+                  <Eye className="mr-2 h-4 w-4" />
+                  <span>Unhide</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff className="mr-2 h-4 w-4" />
+                  <span>Hide</span>
+                </>
+              )}
             </DropdownMenuItem>
           )}
           {(onEdit || onHide) && onDelete && <DropdownMenuSeparator />}

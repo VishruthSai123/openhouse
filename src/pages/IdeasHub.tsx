@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Search, TrendingUp, Clock, ArrowUpCircle, MessageSquare, ArrowLeft, Lightbulb, Home, Briefcase, Users, FolderKanban, MessageCircle, MapPin, DollarSign, Wifi } from 'lucide-react';
+import { Plus, Search, TrendingUp, Clock, ArrowUpCircle, MessageSquare, ArrowLeft, Lightbulb, Home, Briefcase, Users, FolderKanban, MessageCircle, MapPin, DollarSign, Wifi, EyeOff } from 'lucide-react';
 import PostMenu from '@/components/PostMenu';
 
 interface Post {
@@ -24,6 +24,7 @@ interface Post {
   skills_required?: string[] | null;
   is_remote?: boolean;
   company_name?: string | null;
+  is_hidden?: boolean;
   upvotes: number;
   created_at: string;
   user_id: string;
@@ -89,6 +90,8 @@ const IdeasHub = () => {
 
   const loadPosts = async () => {
     try {
+      const { data: { user } } = await supabase.auth.getUser();
+      
       const { data, error } = await supabase
         .from('ideas')
         .select(`
@@ -101,7 +104,7 @@ const IdeasHub = () => {
           idea_votes (id),
           idea_comments (id)
         `)
-        .eq('is_hidden', false)
+        .or(`is_hidden.eq.false,user_id.eq.${user?.id}`)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
@@ -148,6 +151,15 @@ const IdeasHub = () => {
 
   const filterPosts = () => {
     let filtered = posts;
+
+    // Filter out hidden posts from other users
+    if (currentUser) {
+      filtered = filtered.filter(post => 
+        !post.is_hidden || post.user_id === currentUser.id
+      );
+    } else {
+      filtered = filtered.filter(post => !post.is_hidden);
+    }
 
     // Filter by tab
     if (selectedTab !== 'all') {
@@ -269,23 +281,25 @@ const IdeasHub = () => {
     navigate(`/post/${postId}/edit`);
   };
 
-  const handleHidePost = async (postId: string) => {
+  const handleHidePost = async (postId: string, currentlyHidden: boolean = false) => {
     try {
       const { error } = await supabase
         .from('ideas')
-        .update({ is_hidden: true })
+        .update({ is_hidden: !currentlyHidden })
         .eq('id', postId)
         .eq('user_id', currentUser.id); // Ensure user owns the post
 
       if (error) throw error;
 
       toast({
-        title: 'Post hidden',
-        description: 'Your post has been hidden successfully.',
+        title: currentlyHidden ? 'Post unhidden' : 'Post hidden',
+        description: currentlyHidden 
+          ? 'Your post is now visible to everyone.'
+          : 'Your post has been hidden successfully.',
       });
 
-      // Remove from local state
-      setPosts(posts.filter(p => p.id !== postId));
+      // Reload posts to refresh the list
+      loadPosts();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -339,13 +353,19 @@ const IdeasHub = () => {
     return (
       <Card
         key={post.id}
-        className="hover:shadow-lg transition-shadow cursor-pointer group"
+        className={`hover:shadow-lg transition-shadow cursor-pointer group ${post.is_hidden ? 'opacity-60 border-dashed' : ''}`}
         onClick={handleCardClick}
       >
         <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-6 pb-2 sm:pb-3">
           <div className="flex items-start justify-between mb-2 gap-2">
             <div className="flex items-center gap-2 flex-wrap flex-1">
               <Badge variant="secondary" className="text-xs">{post.category}</Badge>
+              {post.is_hidden && (
+                <Badge variant="outline" className="text-xs whitespace-nowrap bg-gray-100 text-gray-700 border-dashed">
+                  <EyeOff className="w-3 h-3 mr-1" />
+                  Hidden
+                </Badge>
+              )}
               {isIdea && post.stage && (
                 <Badge variant="outline" className="text-xs whitespace-nowrap">
                   {stages[post.stage as keyof typeof stages]}
@@ -372,8 +392,9 @@ const IdeasHub = () => {
             {isOwnPost && !isProject && (
               <PostMenu
                 postId={post.id}
+                isHidden={post.is_hidden}
                 onEdit={() => handleEditPost(post.id)}
-                onHide={() => handleHidePost(post.id)}
+                onHide={() => handleHidePost(post.id, post.is_hidden)}
                 onDelete={() => handleDeletePost(post.id)}
               />
             )}

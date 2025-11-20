@@ -123,6 +123,14 @@ export type Database = {
           upvotes: number
           created_at: string
           updated_at: string
+          is_hidden: boolean
+          post_type: string
+          job_type: string | null
+          location: string | null
+          salary_range: string | null
+          skills_required: string[] | null
+          is_remote: boolean | null
+          company_name: string | null
         }
         Insert: {
           id?: string
@@ -135,6 +143,14 @@ export type Database = {
           upvotes?: number
           created_at?: string
           updated_at?: string
+          is_hidden?: boolean
+          post_type?: string
+          job_type?: string | null
+          location?: string | null
+          salary_range?: string | null
+          skills_required?: string[] | null
+          is_remote?: boolean | null
+          company_name?: string | null
         }
         Update: {
           id?: string
@@ -147,6 +163,14 @@ export type Database = {
           upvotes?: number
           created_at?: string
           updated_at?: string
+          is_hidden?: boolean
+          post_type?: string
+          job_type?: string | null
+          location?: string | null
+          salary_range?: string | null
+          skills_required?: string[] | null
+          is_remote?: boolean | null
+          company_name?: string | null
         }
         Relationships: [
           {

@@ -26,6 +26,7 @@ interface JobDetail {
   company_name: string | null;
   created_at: string;
   user_id: string;
+  is_hidden?: boolean;
   profiles: {
     full_name: string;
     avatar_url: string | null;
@@ -98,7 +99,7 @@ const JobDetail = () => {
         .single();
 
       if (error) throw error;
-      setJob(data);
+      setJob(data as any);
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -139,20 +140,24 @@ const JobDetail = () => {
 
   const handleHide = async () => {
     try {
+      const newHiddenState = !job?.is_hidden;
       const { error } = await supabase
         .from('ideas')
-        .update({ is_hidden: true })
+        .update({ is_hidden: newHiddenState })
         .eq('id', id)
         .eq('user_id', currentUser?.id);
 
       if (error) throw error;
 
       toast({
-        title: 'Post hidden',
-        description: 'Your post has been hidden successfully.',
+        title: newHiddenState ? 'Post hidden' : 'Post unhidden',
+        description: newHiddenState 
+          ? 'Your post has been hidden successfully.'
+          : 'Your post is now visible to everyone.',
       });
 
-      navigate('/jobs');
+      // Reload the job
+      loadJob();
     } catch (error: any) {
       toast({
         title: 'Error',
@@ -281,6 +286,7 @@ const JobDetail = () => {
                       onEdit={handleEdit}
                       onHide={handleHide}
                       onDelete={handleDelete}
+                      isHidden={job.is_hidden || false}
                     />
                   )}
                 </div>
