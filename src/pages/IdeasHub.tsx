@@ -34,10 +34,16 @@ interface Post {
   };
   idea_votes: { id: string }[];
   idea_comments: { id: string }[];
+  // For real projects from projects table
+  is_project?: boolean;
+  status?: string;
+  tech_stack?: string[];
+  team_size?: number;
 }
 
 const IdeasHub = () => {
   const [posts, setPosts] = useState<Post[]>([]);
+  const [projects, setProjects] = useState<any[]>([]);
   const [filteredPosts, setFilteredPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -65,11 +71,12 @@ const IdeasHub = () => {
   useEffect(() => {
     checkAuth();
     loadPosts();
+    loadProjects();
   }, []);
 
   useEffect(() => {
     filterPosts();
-  }, [searchQuery, selectedTab, posts]);
+  }, [searchQuery, selectedTab, posts, projects]);
 
   const checkAuth = async () => {
     const { data: { user } } = await supabase.auth.getUser();
@@ -110,6 +117,35 @@ const IdeasHub = () => {
     }
   };
 
+  const loadProjects = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('projects')
+        .select(`
+          id,
+          name,
+          description,
+          category,
+          status,
+          tech_stack,
+          created_at,
+          user_id,
+          profiles:user_id (
+            full_name,
+            avatar_url,
+            role
+          ),
+          project_members (id)
+        `)
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      setProjects(data || []);
+    } catch (error: any) {
+      console.error('Error loading projects:', error);
+    }
+  };
+
   const filterPosts = () => {
     let filtered = posts;
 
@@ -129,11 +165,27 @@ const IdeasHub = () => {
           post.post_type === 'job_posting' || post.post_type === 'job_request'
         );
       } else if (selectedTab === 'projects') {
-        // Projects are ideas in building/mvp/launched stages
-        filtered = filtered.filter(post => 
-          post.post_type === 'idea' && 
-          (post.stage === 'building' || post.stage === 'mvp' || post.stage === 'launched')
-        );
+        // For projects tab, use real projects from projects table
+        const transformedProjects = projects.map(project => ({
+          id: project.id,
+          title: project.name,
+          description: project.description,
+          category: project.category || 'Other',
+          post_type: 'project',
+          stage: project.status,
+          upvotes: 0,
+          created_at: project.created_at,
+          user_id: project.user_id,
+          profiles: project.profiles,
+          idea_votes: [],
+          idea_comments: [],
+          is_project: true,
+          status: project.status,
+          tech_stack: project.tech_stack,
+          team_size: project.project_members?.length || 0
+        }));
+        
+        filtered = transformedProjects as Post[];
       } else {
         filtered = filtered.filter(post => post.post_type === selectedTab);
       }
@@ -273,13 +325,22 @@ const IdeasHub = () => {
     const isIdea = post.post_type === 'idea';
     const isJob = post.post_type === 'job_posting' || post.post_type === 'job_request';
     const isDiscussion = post.post_type === 'discussion';
+    const isProject = post.is_project || post.post_type === 'project';
     const isOwnPost = currentUser && post.user_id === currentUser.id;
+
+    const handleCardClick = () => {
+      if (isProject) {
+        navigate(`/projects/${post.id}`);
+      } else {
+        navigate(`/post/${post.id}`);
+      }
+    };
 
     return (
       <Card
         key={post.id}
         className="hover:shadow-lg transition-shadow cursor-pointer group"
-        onClick={() => navigate(`/post/${post.id}`)}
+        onClick={handleCardClick}
       >
         <CardHeader className="px-3 sm:px-6 pt-3 sm:pt-6 pb-2 sm:pb-3">
           <div className="flex items-start justify-between mb-2 gap-2">
@@ -288,6 +349,12 @@ const IdeasHub = () => {
               {isIdea && post.stage && (
                 <Badge variant="outline" className="text-xs whitespace-nowrap">
                   {stages[post.stage as keyof typeof stages]}
+                </Badge>
+              )}
+              {isProject && post.status && (
+                <Badge variant="outline" className="text-xs whitespace-nowrap bg-blue-100 text-blue-700">
+                  <FolderKanban className="w-3 h-3 mr-1" />
+                  {post.status.charAt(0).toUpperCase() + post.status.slice(1)}
                 </Badge>
               )}
               {isJob && post.job_type && (
@@ -302,7 +369,7 @@ const IdeasHub = () => {
                 </Badge>
               )}
             </div>
-            {isOwnPost && (
+            {isOwnPost && !isProject && (
               <PostMenu
                 postId={post.id}
                 onEdit={() => handleEditPost(post.id)}
@@ -319,6 +386,32 @@ const IdeasHub = () => {
           </CardDescription>
         </CardHeader>
         <CardContent className="px-3 sm:px-6 pb-3 sm:pb-6">
+          {/* Project-specific info */}
+          {isProject && (
+            <div className="space-y-2 mb-3">
+              {post.tech_stack && post.tech_stack.length > 0 && (
+                <div className="flex flex-wrap gap-1">
+                  {post.tech_stack.slice(0, 4).map((tech, idx) => (
+                    <Badge key={idx} variant="secondary" className="text-xs">
+                      {tech}
+                    </Badge>
+                  ))}
+                  {post.tech_stack.length > 4 && (
+                    <Badge variant="secondary" className="text-xs">
+                      +{post.tech_stack.length - 4}
+                    </Badge>
+                  )}
+                </div>
+              )}
+              {post.team_size !== undefined && (
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                  <Users className="w-3 h-3" />
+                  <span>{post.team_size} team member{post.team_size !== 1 ? 's' : ''}</span>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Job-specific info */}
           {isJob && (
             <div className="space-y-2 mb-3">
@@ -385,22 +478,24 @@ const IdeasHub = () => {
               </span>
             </div>
 
-            <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleUpvote(post.id, post.upvotes);
-                }}
-                className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
-              >
-                <ArrowUpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>{post.upvotes}</span>
-              </button>
-              <div className="flex items-center gap-1 text-muted-foreground">
-                <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>{post.idea_comments?.length || 0}</span>
+            {!isProject && (
+              <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleUpvote(post.id, post.upvotes);
+                  }}
+                  className="flex items-center gap-1 text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <ArrowUpCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span>{post.upvotes}</span>
+                </button>
+                <div className="flex items-center gap-1 text-muted-foreground">
+                  <MessageSquare className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span>{post.idea_comments?.length || 0}</span>
+                </div>
               </div>
-            </div>
+            )}
           </div>
         </CardContent>
       </Card>

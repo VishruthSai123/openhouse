@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -15,8 +15,10 @@ import { ArrowLeft, X, Plus } from 'lucide-react';
 type PostType = 'idea' | 'job_posting' | 'job_request' | 'discussion';
 
 const CreateIdea = () => {
+  const { id } = useParams();
   const [searchParams] = useSearchParams();
   const [loading, setLoading] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [postType, setPostType] = useState<PostType>('idea');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
@@ -42,7 +44,54 @@ const CreateIdea = () => {
     if (type && ['idea', 'job_posting', 'job_request', 'discussion'].includes(type)) {
       setPostType(type);
     }
-  }, [searchParams]);
+    
+    // Check if in edit mode and load existing post
+    if (id) {
+      setIsEditMode(true);
+      loadPostData();
+    }
+  }, [searchParams, id]);
+
+  const loadPostData = async () => {
+    if (!id) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('ideas')
+        .select('*')
+        .eq('id', id)
+        .single();
+
+      if (error) throw error;
+
+      // Populate form with existing data
+      setPostType(data.post_type);
+      setTitle(data.title);
+      setDescription(data.description);
+      setCategory(data.category);
+      
+      if (data.post_type === 'idea') {
+        setStage(data.stage || 'idea');
+        setLookingFor(data.looking_for || []);
+      }
+      
+      if (data.post_type === 'job_posting' || data.post_type === 'job_request') {
+        setJobType(data.job_type || '');
+        setLocation(data.location || '');
+        setSalaryRange(data.salary_range || '');
+        setIsRemote(data.is_remote || false);
+        setCompanyName(data.company_name || '');
+        setSkillsRequired(data.skills_required || []);
+      }
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Failed to load post data',
+        variant: 'destructive',
+      });
+      navigate('/ideas');
+    }
+  };
 
   const categories = [
     'SaaS',
@@ -100,36 +149,34 @@ const CreateIdea = () => {
   };
 
   const getPostConfig = () => {
-    switch (postType) {
-      case 'job_posting':
-        return {
-          title: 'Post a Job',
-          description: 'Share your job opening with the community',
-          buttonText: 'Post Job',
-          coinReward: 15
-        };
-      case 'job_request':
-        return {
-          title: 'Request a Job',
-          description: 'Let companies know you\'re looking for opportunities',
-          buttonText: 'Post Request',
-          coinReward: 10
-        };
-      case 'discussion':
-        return {
-          title: 'Start a Discussion',
-          description: 'Engage with the community on important topics',
-          buttonText: 'Start Discussion',
-          coinReward: 5
-        };
-      default:
-        return {
-          title: 'Share Your Idea',
-          description: 'Present your innovative concept to the community',
-          buttonText: 'Post Idea',
-          coinReward: 20
-        };
-    }
+    const baseConfig = {
+      job_posting: {
+        title: isEditMode ? 'Edit Job Posting' : 'Post a Job',
+        description: 'Share your job opening with the community',
+        buttonText: isEditMode ? 'Update Job' : 'Post Job',
+        coinReward: 15
+      },
+      job_request: {
+        title: isEditMode ? 'Edit Job Request' : 'Request a Job',
+        description: 'Let companies know you\'re looking for opportunities',
+        buttonText: isEditMode ? 'Update Request' : 'Post Request',
+        coinReward: 10
+      },
+      discussion: {
+        title: isEditMode ? 'Edit Discussion' : 'Start a Discussion',
+        description: 'Engage with the community on important topics',
+        buttonText: isEditMode ? 'Update Discussion' : 'Start Discussion',
+        coinReward: 5
+      },
+      idea: {
+        title: isEditMode ? 'Edit Your Idea' : 'Share Your Idea',
+        description: 'Present your innovative concept to the community',
+        buttonText: isEditMode ? 'Update Idea' : 'Post Idea',
+        coinReward: 20
+      }
+    };
+    
+    return baseConfig[postType] || baseConfig.idea;
   };
 
   const config = getPostConfig();
@@ -166,7 +213,6 @@ const CreateIdea = () => {
 
       // Prepare the data object
       const ideaData: any = {
-        user_id: user.id,
         title: title.trim(),
         description: description.trim(),
         category,
@@ -189,48 +235,77 @@ const CreateIdea = () => {
         ideaData.company_name = companyName || null;
       }
 
-      const { data, error } = await supabase
-        .from('ideas')
-        .insert(ideaData)
-        .select()
-        .single();
+      let data;
+      let error;
+
+      if (isEditMode && id) {
+        // Update existing post
+        const result = await supabase
+          .from('ideas')
+          .update(ideaData)
+          .eq('id', id)
+          .eq('user_id', user.id)
+          .select()
+          .single();
+        
+        data = result.data;
+        error = result.error;
+      } else {
+        // Create new post
+        ideaData.user_id = user.id;
+        
+        const result = await supabase
+          .from('ideas')
+          .insert(ideaData)
+          .select()
+          .single();
+        
+        data = result.data;
+        error = result.error;
+      }
 
       if (error) throw error;
 
-      // Award coins for posting
-      await supabase
-        .from('coin_transactions')
-        .insert({
-          user_id: user.id,
-          amount: config.coinReward,
-          reason: 'Posted new idea',
-          reference_type: 'idea',
-          reference_id: data.id
-        });
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('builder_coins')
-        .eq('id', user.id)
-        .single();
-
-      if (profile) {
+      // Award coins only for new posts
+      if (!isEditMode) {
         await supabase
+          .from('coin_transactions')
+          .insert({
+            user_id: user.id,
+            amount: config.coinReward,
+            reason: 'Posted new idea',
+            reference_type: 'idea',
+            reference_id: data.id
+          });
+
+        const { data: profile } = await supabase
           .from('profiles')
-          .update({ builder_coins: (profile.builder_coins || 0) + config.coinReward })
-          .eq('id', user.id);
+          .select('builder_coins')
+          .eq('id', user.id)
+          .single();
+
+        if (profile) {
+          await supabase
+            .from('profiles')
+            .update({ builder_coins: (profile.builder_coins || 0) + config.coinReward })
+            .eq('id', user.id);
+        }
       }
 
       toast({
-        title: 'Success! 🎉',
-        description: `Your ${postType.replace('_', ' ')} has been posted. +${config.coinReward} Builder Coins!`,
+        title: isEditMode ? 'Updated! ✓' : 'Success! 🎉',
+        description: isEditMode 
+          ? `Your ${postType.replace('_', ' ')} has been updated.`
+          : `Your ${postType.replace('_', ' ')} has been posted. +${config.coinReward} Builder Coins!`,
       });
 
       // Navigate based on post type
       if (postType === 'job_posting' || postType === 'job_request') {
         navigate('/jobs');
+      } else if (postType === 'discussion') {
+        navigate(`/post/${data.id}`);
       } else {
-        navigate(`/ideas/${data.id}`);
+        navigate(`/post/${data.id}`);
       }
     } catch (error: any) {
       toast({

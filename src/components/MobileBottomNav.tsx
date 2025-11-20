@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Home, Lightbulb, Plus, Briefcase, Users, Newspaper } from 'lucide-react';
+import { Home, Search, Plus, Briefcase, Users, Newspaper } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import PostTypeSelector from './PostTypeSelector';
 
@@ -66,8 +66,8 @@ const MobileBottomNav = () => {
     },
     {
       path: '/ideas',
-      icon: Lightbulb,
-      label: 'Ideas',
+      icon: Search,
+      label: 'Explore',
     },
     {
       path: 'post',
