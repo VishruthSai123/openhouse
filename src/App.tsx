@@ -31,6 +31,7 @@ import Profile from "./pages/Profile";
 import IdeaValidator from "./pages/IdeaValidator";
 import IdeaValidatorHistory from "./pages/IdeaValidatorHistory";
 import Jobs from "./pages/Jobs";
+import EditFeedPost from "./pages/EditFeedPost";
 import MobileBottomNav from "./components/MobileBottomNav";
 import ErrorBoundary from "./components/ErrorBoundary";
 
@@ -52,6 +53,7 @@ const App = () => (
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/feed" element={<Feed />} />
             <Route path="/feed/:postId" element={<PostDetail />} />
+            <Route path="/feed/:postId/edit" element={<EditFeedPost />} />
             <Route path="/messages" element={<Messages />} />
             <Route path="/connections" element={<Connections />} />
             <Route path="/profile/:userId" element={<Profile />} />
