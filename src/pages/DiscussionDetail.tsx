@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Send, MessageSquare, Calendar, ThumbsUp } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import PostMenu from '@/components/PostMenu';
+import { usePaymentGuard } from '@/hooks/usePaymentGuard';
+import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
 
 interface DiscussionDetail {
   id: string;
@@ -50,6 +52,9 @@ const DiscussionDetail = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasPaid } = usePaymentGuard();
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [blockedFeature] = useState<'comment'>('comment');
 
   useEffect(() => {
     checkAuth();
@@ -180,6 +185,12 @@ const DiscussionDetail = () => {
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !currentUser) return;
+
+    // Check payment status
+    if (!hasPaid) {
+      setShowPaymentDialog(true);
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -364,6 +375,12 @@ const DiscussionDetail = () => {
           </CardContent>
         </Card>
       </div>
+
+      <PaymentRequiredDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        feature={blockedFeature}
+      />
     </div>
   );
 };

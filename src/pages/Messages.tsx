@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { MessageCircle, Send, Search, ArrowLeft, Users } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { usePaymentGuard } from '@/hooks/usePaymentGuard';
+import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
 
 interface Profile {
   id: string;
@@ -52,6 +54,9 @@ const Messages = () => {
   const location = useLocation();
   const [pendingConversationId, setPendingConversationId] = useState<string | null>(null);
   const [hasTriedReload, setHasTriedReload] = useState(false);
+  const { hasPaid } = usePaymentGuard();
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [blockedFeature] = useState<'send_message'>('send_message');
 
   useEffect(() => {
     loadCurrentUser();
@@ -416,6 +421,12 @@ const Messages = () => {
   const sendMessage = async () => {
     if (!newMessage.trim() || !selectedConversation) return;
 
+    // Check payment status
+    if (!hasPaid) {
+      setShowPaymentDialog(true);
+      return;
+    }
+
     try {
       const { error } = await supabase.from('messages').insert({
         conversation_id: selectedConversation.id,
@@ -731,6 +742,12 @@ const Messages = () => {
           </Card>
         </div>
       </div>
+
+      <PaymentRequiredDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        feature={blockedFeature}
+      />
     </div>
   );
 };

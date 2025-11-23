@@ -23,6 +23,8 @@ import {
   UserPlus,
   MessageCircle,
 } from 'lucide-react';
+import { usePaymentGuard } from '@/hooks/usePaymentGuard';
+import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
 
 interface Profile {
   id: string;
@@ -55,6 +57,9 @@ const Connections = () => {
   const [activeTab, setActiveTab] = useState('following');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasPaid } = usePaymentGuard();
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [blockedFeature] = useState<'connect'>('connect');
 
   useEffect(() => {
     checkAuth();
@@ -136,6 +141,12 @@ const Connections = () => {
   };
 
   const handleConnectionResponse = async (connectionId: string, status: 'accepted' | 'rejected') => {
+    // Check payment status
+    if (!hasPaid) {
+      setShowPaymentDialog(true);
+      return;
+    }
+
     try {
       const { error: updateError } = await supabase
         .from('connections')
@@ -144,34 +155,58 @@ const Connections = () => {
 
       if (updateError) throw updateError;
 
-      // Award 5 Builder Coins to both users if accepted
+      // Award 5 Builder Coins to both users if accepted (only if they have paid)
       if (status === 'accepted') {
         const connection = connections.find(c => c.id === connectionId);
         if (connection) {
-          await Promise.all([
-            supabase.from('coin_transactions').insert({
-              user_id: connection.sender_id,
-              amount: 5,
-              reason: 'Connection accepted',
-              reference_type: 'connection',
-              reference_id: connectionId,
-            }),
-            supabase.rpc('increment_builder_coins', { 
-              user_id: connection.sender_id, 
-              coins: 5 
-            }),
-            supabase.from('coin_transactions').insert({
-              user_id: connection.receiver_id,
-              amount: 5,
-              reason: 'Connection accepted',
-              reference_type: 'connection',
-              reference_id: connectionId,
-            }),
-            supabase.rpc('increment_builder_coins', { 
-              user_id: connection.receiver_id, 
-              coins: 5 
-            }),
-          ]);
+          // Check if both users have paid before awarding coins
+          const { data: senderProfile } = await supabase
+            .from('profiles')
+            .select('has_paid')
+            .eq('id', connection.sender_id)
+            .single();
+
+          const { data: receiverProfile } = await supabase
+            .from('profiles')
+            .select('has_paid')
+            .eq('id', connection.receiver_id)
+            .single();
+
+          const coinPromises = [];
+          
+          if (senderProfile?.has_paid) {
+            coinPromises.push(
+              supabase.from('coin_transactions').insert({
+                user_id: connection.sender_id,
+                amount: 5,
+                reason: 'Connection accepted',
+                reference_type: 'connection',
+                reference_id: connectionId,
+              }),
+              supabase.rpc('increment_builder_coins', { 
+                user_id: connection.sender_id, 
+                coins: 5 
+              })
+            );
+          }
+
+          if (receiverProfile?.has_paid) {
+            coinPromises.push(
+              supabase.from('coin_transactions').insert({
+                user_id: connection.receiver_id,
+                amount: 5,
+                reason: 'Connection accepted',
+                reference_type: 'connection',
+                reference_id: connectionId,
+              }),
+              supabase.rpc('increment_builder_coins', { 
+                user_id: connection.receiver_id, 
+                coins: 5 
+              })
+            );
+          }
+
+          await Promise.all(coinPromises);
         }
       }
 
@@ -525,6 +560,12 @@ const Connections = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <PaymentRequiredDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        feature={blockedFeature}
+      />
     </div>
   );
 };

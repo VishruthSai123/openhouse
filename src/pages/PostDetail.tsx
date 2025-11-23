@@ -26,6 +26,8 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { usePaymentGuard } from '@/hooks/usePaymentGuard';
+import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
 
 interface FeedPost {
   id: string;
@@ -82,6 +84,9 @@ const PostDetail = () => {
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string>('');
   const { toast } = useToast();
+  const { hasPaid } = usePaymentGuard();
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [blockedFeature, setBlockedFeature] = useState<'upvote' | 'comment' | 'connect'>('upvote');
 
   useEffect(() => {
     loadCurrentUser();
@@ -213,6 +218,13 @@ const PostDetail = () => {
   const addComment = async () => {
     if (!newComment.trim() || !post) return;
 
+    // Check payment status
+    if (!hasPaid) {
+      setBlockedFeature('comment');
+      setShowPaymentDialog(true);
+      return;
+    }
+
     const tempComment: Comment = {
       id: `temp-${Date.now()}`,
       content: newComment.trim(),
@@ -255,6 +267,13 @@ const PostDetail = () => {
 
   const handleInteraction = async (type: 'upvote' | 'save') => {
     if (!post) return;
+
+    // Check payment status for upvote
+    if (type === 'upvote' && !hasPaid) {
+      setBlockedFeature('upvote');
+      setShowPaymentDialog(true);
+      return;
+    }
 
     const isCurrentlyActive = type === 'upvote' ? post.is_upvoted : post.is_saved;
 
@@ -311,6 +330,13 @@ const PostDetail = () => {
 
   const handleConnect = async () => {
     if (!post) return;
+
+    // Check payment status
+    if (!hasPaid) {
+      setBlockedFeature('connect');
+      setShowPaymentDialog(true);
+      return;
+    }
 
     try {
       await supabase.from('connections').insert({
@@ -728,6 +754,12 @@ const PostDetail = () => {
           </CardContent>
         </Card>
       </main>
+
+      <PaymentRequiredDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        feature={blockedFeature}
+      />
     </div>
   );
 };

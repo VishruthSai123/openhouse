@@ -27,6 +27,8 @@ import {
   Target,
   Star,
 } from "lucide-react";
+import { usePaymentGuard } from "@/hooks/usePaymentGuard";
+import PaymentRequiredDialog from "@/components/PaymentRequiredDialog";
 
 interface Profile {
   id: string;
@@ -65,6 +67,9 @@ const FindTeam = () => {
   const [activeTab, setActiveTab] = useState("browse");
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasPaid } = usePaymentGuard();
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [blockedFeature, setBlockedFeature] = useState<'send_request' | 'connect'>('send_request');
 
   useEffect(() => {
     checkAuth();
@@ -198,6 +203,14 @@ const FindTeam = () => {
   const sendConnectionRequest = async () => {
     if (!selectedUser || !currentUser) return;
 
+    // Check payment status
+    if (!hasPaid) {
+      setBlockedFeature('send_request');
+      setShowPaymentDialog(true);
+      setSelectedUser(null);
+      return;
+    }
+
     try {
       setSendingRequest(true);
 
@@ -233,6 +246,13 @@ const FindTeam = () => {
   };
 
   const handleConnectionResponse = async (connectionId: string, status: 'accepted' | 'rejected') => {
+    // Check payment status
+    if (!hasPaid) {
+      setBlockedFeature('connect');
+      setShowPaymentDialog(true);
+      return;
+    }
+
     try {
       const { error: updateError } = await supabase
         .from('connections')
@@ -241,36 +261,58 @@ const FindTeam = () => {
 
       if (updateError) throw updateError;
 
-      // Award 5 Builder Coins to both users if accepted
+      // Award 5 Builder Coins to both users if accepted (only if they have paid)
       if (status === 'accepted') {
         const connection = connections.find(c => c.id === connectionId);
         if (connection) {
-          await Promise.all([
-            // Award sender
-            supabase.from('coin_transactions').insert({
-              user_id: connection.sender_id,
-              amount: 5,
-              reason: 'Connection accepted',
-              reference_type: 'connection',
-              reference_id: connectionId,
-            }),
-            supabase.rpc('increment_builder_coins', { 
-              user_id: connection.sender_id, 
-              coins: 5 
-            }),
-            // Award receiver
-            supabase.from('coin_transactions').insert({
-              user_id: connection.receiver_id,
-              amount: 5,
-              reason: 'Connection accepted',
-              reference_type: 'connection',
-              reference_id: connectionId,
-            }),
-            supabase.rpc('increment_builder_coins', { 
-              user_id: connection.receiver_id, 
-              coins: 5 
-            }),
-          ]);
+          // Check if both users have paid before awarding coins
+          const { data: senderProfile } = await supabase
+            .from('profiles')
+            .select('has_paid')
+            .eq('id', connection.sender_id)
+            .single();
+
+          const { data: receiverProfile } = await supabase
+            .from('profiles')
+            .select('has_paid')
+            .eq('id', connection.receiver_id)
+            .single();
+
+          const coinPromises = [];
+          
+          if (senderProfile?.has_paid) {
+            coinPromises.push(
+              supabase.from('coin_transactions').insert({
+                user_id: connection.sender_id,
+                amount: 5,
+                reason: 'Connection accepted',
+                reference_type: 'connection',
+                reference_id: connectionId,
+              }),
+              supabase.rpc('increment_builder_coins', { 
+                user_id: connection.sender_id, 
+                coins: 5 
+              })
+            );
+          }
+
+          if (receiverProfile?.has_paid) {
+            coinPromises.push(
+              supabase.from('coin_transactions').insert({
+                user_id: connection.receiver_id,
+                amount: 5,
+                reason: 'Connection accepted',
+                reference_type: 'connection',
+                reference_id: connectionId,
+              }),
+              supabase.rpc('increment_builder_coins', { 
+                user_id: connection.receiver_id, 
+                coins: 5 
+              })
+            );
+          }
+
+          await Promise.all(coinPromises);
         }
       }
 
@@ -670,6 +712,12 @@ const FindTeam = () => {
           </TabsContent>
         </Tabs>
       </main>
+
+      <PaymentRequiredDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        feature={blockedFeature}
+      />
     </div>
   );
 };

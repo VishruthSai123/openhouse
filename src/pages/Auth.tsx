@@ -73,15 +73,17 @@ const Auth = () => {
         // Check if user has completed onboarding
         const { data: profile } = await supabase
           .from('profiles')
-          .select('onboarding_completed')
+          .select('onboarding_completed, has_paid')
           .eq('id', session.user.id)
           .single();
         
         setTimeout(() => {
-          if (profile?.onboarding_completed) {
-            navigate("/feed", { replace: true });
-          } else {
+          if (!profile?.onboarding_completed) {
             navigate("/onboarding", { replace: true });
+          } else if (!profile?.has_paid) {
+            navigate("/payment", { replace: true });
+          } else {
+            navigate("/home", { replace: true });
           }
         }, 100);
       }
@@ -109,15 +111,17 @@ const Auth = () => {
         
         const { data: profile } = await supabase
           .from('profiles')
-          .select('onboarding_completed')
+          .select('onboarding_completed, has_paid')
           .eq('id', session.user.id)
           .single();
         
         isRedirecting = true;
-        if (profile?.onboarding_completed) {
-          navigate("/home", { replace: true });
-        } else {
+        if (!profile?.onboarding_completed) {
           navigate("/onboarding", { replace: true });
+        } else if (!profile?.has_paid) {
+          navigate("/payment", { replace: true });
+        } else {
+          navigate("/home", { replace: true });
         }
       } else if (!session && retryCount < 3 && window.location.hash.includes('access_token')) {
         // If we have hash params but no session yet, retry (OAuth callback in progress)

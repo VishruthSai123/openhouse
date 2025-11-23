@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, Send, MapPin, DollarSign, Briefcase, Building2, Wifi, Calendar } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import PostMenu from '@/components/PostMenu';
+import { usePaymentGuard } from '@/hooks/usePaymentGuard';
+import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
 
 interface JobDetail {
   id: string;
@@ -57,6 +59,9 @@ const JobDetail = () => {
   const [currentUser, setCurrentUser] = useState<any>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasPaid } = usePaymentGuard();
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [blockedFeature, setBlockedFeature] = useState<'apply_job' | 'comment'>('apply_job');
 
   const jobTypeLabels: { [key: string]: string } = {
     'full-time': 'Full-time',
@@ -195,6 +200,13 @@ const JobDetail = () => {
   const handleSubmitComment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newComment.trim() || !currentUser) return;
+
+    // Check payment status
+    if (!hasPaid) {
+      setBlockedFeature('comment');
+      setShowPaymentDialog(true);
+      return;
+    }
 
     setSubmitting(true);
     try {
@@ -362,6 +374,13 @@ const JobDetail = () => {
               className="w-full" 
               size="lg"
               onClick={() => {
+                // Check payment status
+                if (!hasPaid) {
+                  setBlockedFeature('apply_job');
+                  setShowPaymentDialog(true);
+                  return;
+                }
+                
                 const subject = encodeURIComponent(`Application for ${job.title}`);
                 const body = encodeURIComponent(`Hi ${job.profiles?.full_name},\n\nI'm interested in the ${job.post_type === 'job_request' ? 'opportunity to work with you' : job.title + ' position'}.\n\n`);
                 window.location.href = `mailto:${job.profiles?.email}?subject=${subject}&body=${body}`;
@@ -435,6 +454,12 @@ const JobDetail = () => {
           </CardContent>
         </Card>
       </div>
+
+      <PaymentRequiredDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        feature={blockedFeature}
+      />
     </div>
   );
 };
