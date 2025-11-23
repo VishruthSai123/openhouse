@@ -188,6 +188,7 @@ const Feed = () => {
             role
           )
         `)
+        .or(`is_hidden.eq.false,is_hidden.is.null,author_id.eq.${currentUserId}`)
         .order('created_at', { ascending: false })
         .limit(50);
       if (postsError) throw postsError;

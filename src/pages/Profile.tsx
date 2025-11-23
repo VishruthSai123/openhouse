@@ -269,11 +269,21 @@ const Profile = () => {
     try {
       console.log('Loading posts for user:', userId);
       
-      // Get all posts by this user
-      const { data: postsData, error: postsError } = await supabase
+      // Get current user to check if viewing own profile
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      const isOwnProfile = currentUser?.id === userId;
+      
+      // Get all posts by this user (filter hidden posts unless viewing own profile)
+      let query = supabase
         .from('feed_posts')
         .select('id, post_type, title, content, created_at, tags')
-        .eq('author_id', userId)
+        .eq('author_id', userId);
+      
+      if (!isOwnProfile) {
+        query = query.or('is_hidden.eq.false,is_hidden.is.null');
+      }
+      
+      const { data: postsData, error: postsError } = await query
         .order('created_at', { ascending: false });
 
       if (postsError) throw postsError;

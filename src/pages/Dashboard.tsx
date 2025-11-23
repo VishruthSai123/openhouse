@@ -123,10 +123,10 @@ const Dashboard = () => {
     try {
       const activities: any[] = [];
 
-      // Get recent ideas
+      // Get recent ideas (show all including hidden since this is user's own dashboard)
       const { data: ideas } = await supabase
         .from('ideas')
-        .select('id, title, created_at')
+        .select('id, title, created_at, is_hidden')
         .eq('user_id', userId)
         .order('created_at', { ascending: false })
         .limit(3);

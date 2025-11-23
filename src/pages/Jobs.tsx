@@ -83,6 +83,7 @@ const Jobs = () => {
       setLoading(true);
 
       // Load job postings
+      const { data: { user } } = await supabase.auth.getUser();
       const { data: postings, error: postingsError } = await supabase
         .from('ideas')
         .select(`
@@ -90,6 +91,7 @@ const Jobs = () => {
           profiles!ideas_user_id_fkey(full_name, avatar_url, role)
         `)
         .eq('post_type', 'job_posting')
+        .or(`is_hidden.eq.false,is_hidden.is.null,user_id.eq.${user?.id}`)
         .order('created_at', { ascending: false });
 
       if (postingsError) throw postingsError;
@@ -102,6 +104,7 @@ const Jobs = () => {
           profiles!ideas_user_id_fkey(full_name, avatar_url, role)
         `)
         .eq('post_type', 'job_request')
+        .or(`is_hidden.eq.false,is_hidden.is.null,user_id.eq.${user?.id}`)
         .order('created_at', { ascending: false });
 
       if (requestsError) throw requestsError;
