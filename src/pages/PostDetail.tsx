@@ -28,6 +28,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { usePaymentGuard } from '@/hooks/usePaymentGuard';
 import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
+import PostMenu from '@/components/PostMenu';
 
 interface FeedPost {
   id: string;
@@ -38,6 +39,7 @@ interface FeedPost {
   created_at: string;
   tags: string[] | null;
   project_id?: string | null;
+  is_hidden?: boolean;
   profiles?: {
     id: string;
     full_name: string | null;
@@ -393,6 +395,67 @@ const PostDetail = () => {
     }
   };
 
+  const handleEdit = (postId: string) => {
+    navigate(`/feed/${postId}/edit`);
+  };
+
+  const handleHide = async (postId: string) => {
+    if (!post) return;
+
+    try {
+      const newHiddenState = !post.is_hidden;
+      const { error } = await supabase
+        .from('feed_posts')
+        .update({ is_hidden: newHiddenState })
+        .eq('id', postId)
+        .eq('author_id', currentUserId);
+
+      if (error) throw error;
+
+      toast({
+        title: newHiddenState ? 'Post hidden' : 'Post unhidden',
+        description: newHiddenState 
+          ? 'Your post has been hidden successfully.'
+          : 'Your post is now visible to everyone.',
+      });
+
+      // Reload post
+      loadPost();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDelete = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('feed_posts')
+        .delete()
+        .eq('id', postId)
+        .eq('author_id', currentUserId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Post deleted',
+        description: 'Your post has been permanently deleted.',
+      });
+
+      // Navigate back to feed
+      navigate('/feed');
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const getPostIcon = (type: string) => {
     switch (type) {
       case 'team_hiring':
@@ -501,6 +564,14 @@ const PostDetail = () => {
                       <CheckCircle2 className="w-4 h-4" />
                       <span className="hidden sm:inline">Connected</span>
                     </div>
+                  )}
+                  {post.author_id === currentUserId && (
+                    <PostMenu
+                      postId={post.id}
+                      onEdit={() => handleEdit(post.id)}
+                      onHide={() => handleHide(post.id)}
+                      onDelete={() => handleDelete(post.id)}
+                    />
                   )}
                 </div>
                 <div className="flex items-center gap-2 mt-2">

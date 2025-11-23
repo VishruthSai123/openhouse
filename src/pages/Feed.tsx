@@ -25,6 +25,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
 import { usePaymentGuard } from '@/hooks/usePaymentGuard';
+import PostMenu from '@/components/PostMenu';
 
 interface FeedPost {
   id: string;
@@ -34,6 +35,7 @@ interface FeedPost {
   content: string;
   created_at: string;
   tags: string[] | null;
+  is_hidden?: boolean;
   profiles?: {
     id: string;
     full_name: string | null;
@@ -481,6 +483,69 @@ const Feed = () => {
     }
   };
 
+  const handleEditPost = (postId: string) => {
+    navigate(`/feed/${postId}/edit`);
+  };
+
+  const handleHidePost = async (postId: string) => {
+    const post = displayedPosts.find(p => p.id === postId);
+    if (!post) return;
+
+    try {
+      const newHiddenState = !(post as any).is_hidden;
+      const { error } = await supabase
+        .from('feed_posts')
+        .update({ is_hidden: newHiddenState })
+        .eq('id', postId)
+        .eq('author_id', currentUserId);
+
+      if (error) throw error;
+
+      toast({
+        title: newHiddenState ? 'Post hidden' : 'Post unhidden',
+        description: newHiddenState 
+          ? 'Your post has been hidden successfully.'
+          : 'Your post is now visible to everyone.',
+      });
+
+      // Reload posts
+      loadPosts();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeletePost = async (postId: string) => {
+    try {
+      const { error } = await supabase
+        .from('feed_posts')
+        .delete()
+        .eq('id', postId)
+        .eq('author_id', currentUserId);
+
+      if (error) throw error;
+
+      toast({
+        title: 'Post deleted',
+        description: 'Your post has been permanently deleted.',
+      });
+
+      // Remove from local state
+      setDisplayedPosts(prev => prev.filter(p => p.id !== postId));
+      setAllPosts(prev => prev.filter(p => p.id !== postId));
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message,
+        variant: 'destructive',
+      });
+    }
+  };
+
   const loadComments = async (postId: string) => {
     try {
       const { data, error } = await supabase
@@ -725,7 +790,15 @@ const Feed = () => {
                               {formatDistanceToNow(new Date(post.created_at), { addSuffix: true })}
                             </p>
                           </div>
-                          {!post.is_connected && post.author_id !== currentUserId && (
+                          {post.author_id === currentUserId ? (
+                            <PostMenu
+                              postId={post.id}
+                              isHidden={post.is_hidden || false}
+                              onEdit={() => handleEditPost(post.id)}
+                              onHide={() => handleHidePost(post.id)}
+                              onDelete={() => handleDeletePost(post.id)}
+                            />
+                          ) : !post.is_connected && post.author_id !== currentUserId ? (
                             <Button
                               size="sm"
                               variant="outline"
@@ -741,7 +814,7 @@ const Feed = () => {
                               <UserPlus className="w-3 h-3 mr-1" />
                               {post.connection_status === 'pending' ? 'Request Sent' : 'Connect'}
                             </Button>
-                          )}
+                          ) : null}
                         </div>
                         <div className="flex items-center gap-2 mt-1">
                           <Badge variant="secondary" className="text-xs">
