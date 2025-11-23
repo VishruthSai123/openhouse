@@ -367,6 +367,13 @@ const Feed = () => {
     const post = displayedPosts.find((p) => p.id === postId);
     if (!post) return;
 
+    // Check payment status for upvote
+    if (type === 'upvote' && !hasPaid) {
+      setBlockedFeature('upvote');
+      setShowPaymentDialog(true);
+      return;
+    }
+
     const isCurrentlyActive = type === 'upvote' ? post.is_upvoted : post.is_saved;
 
     // Optimistic UI update
@@ -665,10 +672,10 @@ const Feed = () => {
         </div>
       </header>
 
-      <main className="container px-3 sm:px-4 py-4 sm:py-6 max-w-3xl mx-auto">
-        <div className="space-y-4">
+      <main className="container px-3 sm:px-4 py-4 sm:py-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {displayedPosts.length === 0 && !loading ? (
-            <Card>
+            <Card className="lg:col-span-2">
               <CardContent className="py-12 text-center">
                 <p className="text-muted-foreground">
                   No posts yet. Be the first to share something!
@@ -883,7 +890,7 @@ const Feed = () => {
               
               {/* Load More Button */}
               {hasMore && (
-                <Card className="mt-4">
+                <Card className="mt-4 lg:col-span-2">
                   <CardContent className="py-6 text-center">
                     <Button
                       onClick={loadMore}
