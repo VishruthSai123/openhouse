@@ -510,7 +510,7 @@ const PostDetail = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur">
         <div className="container flex h-14 sm:h-16 items-center gap-3 px-3 sm:px-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="h-8 w-8 sm:h-10 sm:w-10">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/feed')} className="h-8 w-8 sm:h-10 sm:w-10">
             <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
           <h1 className="text-lg sm:text-xl font-bold">Post Details</h1>
@@ -568,6 +568,7 @@ const PostDetail = () => {
                   {post.author_id === currentUserId && (
                     <PostMenu
                       postId={post.id}
+                      isHidden={post.is_hidden || false}
                       onEdit={() => handleEdit(post.id)}
                       onHide={() => handleHide(post.id)}
                       onDelete={() => handleDelete(post.id)}
