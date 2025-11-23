@@ -11,6 +11,8 @@ import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, ArrowUpCircle, MessageSquare, Send, Calendar } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import PostMenu from '@/components/PostMenu';
+import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
+import { usePaymentGuard } from '@/hooks/usePaymentGuard';
 
 interface IdeaDetail {
   id: string;
@@ -52,8 +54,11 @@ const IdeaDetail = () => {
   const [submitting, setSubmitting] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [blockedFeature, setBlockedFeature] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasPaid, restrictedFeatures } = usePaymentGuard();
 
   const stages = {
     'idea': '💡 Just an Idea',
@@ -146,6 +151,13 @@ const IdeaDetail = () => {
   const handleUpvote = async () => {
     if (!currentUser || !idea) return;
 
+    // Check payment status
+    if (!hasPaid) {
+      setBlockedFeature(restrictedFeatures.upvote);
+      setShowPaymentDialog(true);
+      return;
+    }
+
     try {
       if (hasVoted) {
         // Remove vote
@@ -172,7 +184,7 @@ const IdeaDetail = () => {
           .update({ upvotes: idea.upvotes + 1 })
           .eq('id', id);
 
-        // Award coins
+        // Award coins (only for paid users)
         if (idea.user_id !== currentUser.id) {
           await awardCoins(idea.user_id, 1, 'Upvote received');
         }
@@ -195,6 +207,13 @@ const IdeaDetail = () => {
     e.preventDefault();
     if (!newComment.trim() || !currentUser) return;
 
+    // Check payment status
+    if (!hasPaid) {
+      setBlockedFeature(restrictedFeatures.comment);
+      setShowPaymentDialog(true);
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -208,7 +227,7 @@ const IdeaDetail = () => {
 
       if (error) throw error;
 
-      // Award coins
+      // Award coins (only for paid users)
       await awardCoins(currentUser.id, 2, 'Commented on idea');
       if (idea && idea.user_id !== currentUser.id) {
         await awardCoins(idea.user_id, 1, 'Comment received');
@@ -292,6 +311,19 @@ const IdeaDetail = () => {
 
   const awardCoins = async (userId: string, amount: number, reason: string) => {
     try {
+      // Check if the user has paid before awarding coins
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('has_paid, builder_coins')
+        .eq('id', userId)
+        .single();
+
+      // Only award coins to paid users
+      if (!profile?.has_paid) {
+        console.log('Coins not awarded - user has not paid');
+        return;
+      }
+
       await supabase
         .from('coin_transactions')
         .insert({
@@ -301,12 +333,6 @@ const IdeaDetail = () => {
           reference_type: 'idea_interaction',
           reference_id: id
         });
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('builder_coins')
-        .eq('id', userId)
-        .single();
 
       if (profile) {
         await supabase
@@ -505,6 +531,12 @@ const IdeaDetail = () => {
           </CardContent>
         </Card>
       </div>
+
+      <PaymentRequiredDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        featureName={blockedFeature}
+      />
     </div>
   );
 };

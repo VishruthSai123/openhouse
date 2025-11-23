@@ -9,6 +9,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Plus, Search, TrendingUp, Clock, ArrowUpCircle, MessageSquare, ArrowLeft, Lightbulb, Home, Briefcase, Users, FolderKanban, MessageCircle, MapPin, DollarSign, Wifi, EyeOff } from 'lucide-react';
 import PostMenu from '@/components/PostMenu';
+import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
+import { usePaymentGuard } from '@/hooks/usePaymentGuard';
 
 interface Post {
   id: string;
@@ -50,8 +52,11 @@ const IdeasHub = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTab, setSelectedTab] = useState('all');
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [blockedFeature, setBlockedFeature] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasPaid, restrictedFeatures } = usePaymentGuard();
 
   const stages = {
     'idea': '💡 Idea',
@@ -220,6 +225,13 @@ const IdeasHub = () => {
   const handleUpvote = async (ideaId: string, currentVotes: number) => {
     if (!currentUser) return;
 
+    // Check payment status
+    if (!hasPaid) {
+      setBlockedFeature(restrictedFeatures.upvote);
+      setShowPaymentDialog(true);
+      return;
+    }
+
     try {
       // Check if already voted
       const { data: existingVote } = await supabase
@@ -251,7 +263,7 @@ const IdeasHub = () => {
           .update({ upvotes: currentVotes + 1 })
           .eq('id', ideaId);
 
-        // Award coins to idea creator
+        // Award coins to idea creator (only for paid users)
         const post = posts.find(i => i.id === ideaId);
         if (post && post.user_id !== currentUser.id) {
           await awardCoins(post.user_id, 1, 'Upvote received on idea');
@@ -525,6 +537,19 @@ const IdeasHub = () => {
 
   const awardCoins = async (userId: string, amount: number, reason: string) => {
     try {
+      // Check if the user has paid before awarding coins
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('has_paid, builder_coins')
+        .eq('id', userId)
+        .single();
+
+      // Only award coins to paid users
+      if (!profile?.has_paid) {
+        console.log('Coins not awarded - user has not paid');
+        return;
+      }
+
       // Insert transaction
       await supabase
         .from('coin_transactions')
@@ -536,12 +561,6 @@ const IdeasHub = () => {
         });
 
       // Update user's total coins
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('builder_coins')
-        .eq('id', userId)
-        .single();
-
       if (profile) {
         await supabase
           .from('profiles')
@@ -643,6 +662,12 @@ const IdeasHub = () => {
           </div>
         )}
       </div>
+
+      <PaymentRequiredDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        featureName={blockedFeature}
+      />
     </div>
   );
 };

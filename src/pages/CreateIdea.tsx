@@ -11,6 +11,8 @@ import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import { useToast } from '@/hooks/use-toast';
 import { ArrowLeft, X, Plus } from 'lucide-react';
+import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
+import { usePaymentGuard } from '@/hooks/usePaymentGuard';
 
 type PostType = 'idea' | 'job_posting' | 'job_request' | 'discussion';
 
@@ -36,10 +38,29 @@ const CreateIdea = () => {
   const [skillsRequired, setSkillsRequired] = useState<string[]>([]);
   const [newSkill, setNewSkill] = useState('');
   
+  // Payment gate
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [blockedFeature, setBlockedFeature] = useState('');
+  
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasPaid, restrictedFeatures } = usePaymentGuard();
 
   useEffect(() => {
+    // Check payment status for creating new posts (not for editing)
+    if (!id && hasPaid === false) {
+      const featureMap: Record<PostType, string> = {
+        'idea': restrictedFeatures.create_idea,
+        'job_posting': restrictedFeatures.create_job,
+        'job_request': restrictedFeatures.create_job,
+        'discussion': restrictedFeatures.create_discussion
+      };
+      
+      setBlockedFeature(featureMap[postType]);
+      setShowPaymentDialog(true);
+      return;
+    }
+
     const type = searchParams.get('type') as PostType;
     if (type && ['idea', 'job_posting', 'job_request', 'discussion'].includes(type)) {
       setPostType(type);
@@ -50,7 +71,7 @@ const CreateIdea = () => {
       setIsEditMode(true);
       loadPostData();
     }
-  }, [searchParams, id]);
+  }, [searchParams, id, hasPaid, postType]);
 
   const loadPostData = async () => {
     if (!id) return;
@@ -575,6 +596,18 @@ const CreateIdea = () => {
           </CardContent>
         </Card>
       </div>
+
+      <PaymentRequiredDialog
+        open={showPaymentDialog}
+        onOpenChange={(open) => {
+          setShowPaymentDialog(open);
+          if (!open && !id && hasPaid === false) {
+            // If user closes dialog without paying and trying to create new post, go back
+            navigate(-1);
+          }
+        }}
+        featureName={blockedFeature}
+      />
     </div>
   );
 };

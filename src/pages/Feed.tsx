@@ -23,6 +23,8 @@ import {
 } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
+import { usePaymentGuard } from '@/hooks/usePaymentGuard';
 
 interface FeedPost {
   id: string;
@@ -70,8 +72,11 @@ const Feed = () => {
   const [selectedPost, setSelectedPost] = useState<FeedPost | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [blockedFeature, setBlockedFeature] = useState('');
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { hasPaid, restrictedFeatures } = usePaymentGuard();
 
   useEffect(() => {
     loadCurrentUser();
@@ -423,6 +428,13 @@ const Feed = () => {
   };
 
   const handleConnect = async (userId: string) => {
+    // Check payment status
+    if (!hasPaid) {
+      setBlockedFeature(restrictedFeatures.send_request);
+      setShowPaymentDialog(true);
+      return;
+    }
+
     // Optimistic UI update
     setDisplayedPosts(prevPosts =>
       prevPosts.map(p =>
@@ -895,6 +907,12 @@ const Feed = () => {
             )}
         </div>
       </main>
+
+      <PaymentRequiredDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        featureName={blockedFeature}
+      />
     </div>
   );
 };

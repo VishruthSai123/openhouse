@@ -4,10 +4,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { Check, Sparkles, Shield, Zap, AlertCircle } from "lucide-react";
+import { Check, Sparkles, Shield, Zap } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 
 declare global {
   interface Window {
@@ -18,7 +16,6 @@ declare global {
 const Payment = () => {
   const [loading, setLoading] = useState(false);
   const [checkingPayment, setCheckingPayment] = useState(true);
-  const [isTestMode, setIsTestMode] = useState(import.meta.env.VITE_RAZORPAY_MODE === 'test');
   const navigate = useNavigate();
   const { toast } = useToast();
 
@@ -69,10 +66,8 @@ const Payment = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('No user found');
 
-      // Get the appropriate Razorpay key based on mode
-      const razorpayKey = isTestMode 
-        ? import.meta.env.VITE_RAZORPAY_TEST_KEY_ID 
-        : import.meta.env.VITE_RAZORPAY_LIVE_KEY_ID;
+      // Get Razorpay key (production mode only)
+      const razorpayKey = import.meta.env.VITE_RAZORPAY_LIVE_KEY_ID;
 
       if (!razorpayKey) {
         throw new Error('Razorpay key not configured');
@@ -80,15 +75,15 @@ const Payment = () => {
 
       // Call edge function to create Razorpay order
       console.log('Calling create-razorpay-order function...');
-      console.log('Request data:', { amount: 100, userId: user.id, isTestMode });
+      console.log('Request data:', { amount: 49, userId: user.id, isTestMode: false });
       
       let response;
       try {
         response = await supabase.functions.invoke('create-razorpay-order', {
           body: { 
-            amount: 100,
+            amount: 49,
             userId: user.id,
-            isTestMode 
+            isTestMode: false
           }
         });
       } catch (err: any) {
@@ -277,52 +272,10 @@ const Payment = () => {
     }
   };
 
-  // Demo payment for testing (remove in production)
-  const handleDemoPayment = async () => {
-    if (!isTestMode) {
-      toast({
-        title: "Demo Mode Only",
-        description: "Switch to test mode to use demo payment",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) throw new Error('No user found');
-
-      // Simulate payment success
-      const { error: paymentError } = await supabase
-        .from('payments')
-        .insert({
-          user_id: user.id,
-          amount: 100.00,
-          currency: 'INR',
-          payment_gateway: 'demo',
-          payment_method: 'test',
-          transaction_id: `demo_${Date.now()}`,
-          status: 'completed'
-        });
-
-      if (paymentError) throw paymentError;
-
-      toast({
-        title: "Demo Payment Successful! 🎉",
-        description: "Welcome to Open House. Let's build something amazing!",
-      });
-
-      navigate('/home');
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
+  // Handle skip/explore option
+  const handleExplore = async () => {
+    // Allow user to explore platform without payment
+    navigate('/feed');
   };
 
   if (checkingPayment) {
@@ -334,12 +287,12 @@ const Payment = () => {
   }
 
   const features = [
-    'Access to Idea Hub & Co-Founder Matching',
+    'Post Ideas & Find Co-Founders',
     'Create & Join Build Spaces',
     'Book 1:1 Mentorship Sessions',
-    'Participate in Idea Battle Arena',
+    'Upvote, Comment & Share Posts',
     'Earn Builder Coins & Rewards',
-    'Connect with Investors',
+    'Connect & Message with Builders',
     'Lifetime Access - Pay Once',
   ];
 
@@ -358,34 +311,10 @@ const Payment = () => {
 
         <Card className="border-2 border-primary/20">
           <CardHeader className="text-center pb-4">
-            <div className="flex items-center justify-between mb-4">
-              <Badge variant={isTestMode ? "secondary" : "default"} className="text-xs">
-                {isTestMode ? "Test Mode" : "Live Mode"}
-              </Badge>
-              <div className="flex items-center gap-2">
-                <Label htmlFor="test-mode" className="text-xs">Test</Label>
-                <Switch 
-                  id="test-mode"
-                  checked={!isTestMode} 
-                  onCheckedChange={(checked) => setIsTestMode(!checked)}
-                />
-                <Label htmlFor="test-mode" className="text-xs">Live</Label>
-              </div>
-            </div>
-            
-            {isTestMode && (
-              <div className="mb-4 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-yellow-500 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-left text-yellow-600 dark:text-yellow-400">
-                  You're in test mode. Use test card: 4111 1111 1111 1111 | Any future date | Any CVV
-                </p>
-              </div>
-            )}
-            
             <CardTitle className="text-2xl">Open House Access</CardTitle>
             <CardDescription>Lifetime membership for student founders</CardDescription>
             <div className="mt-6">
-              <div className="text-5xl font-bold">₹100</div>
+              <div className="text-5xl font-bold">₹49</div>
               <div className="text-sm text-muted-foreground mt-1">One-time payment • No subscriptions</div>
             </div>
           </CardHeader>
@@ -407,20 +336,18 @@ const Payment = () => {
                 onClick={handlePayment}
                 disabled={loading}
               >
-                {loading ? 'Processing...' : `Pay ₹100 with Razorpay (${isTestMode ? 'Test' : 'Live'})`}
+                {loading ? 'Processing...' : 'Pay ₹49 & Unlock All Features'}
               </Button>
 
-              {isTestMode && (
-                <Button 
-                  variant="outline"
-                  size="lg" 
-                  className="w-full" 
-                  onClick={handleDemoPayment}
-                  disabled={loading}
-                >
-                  Quick Demo Payment (Test Mode Only)
-                </Button>
-              )}
+              <Button 
+                variant="outline"
+                size="lg" 
+                className="w-full" 
+                onClick={handleExplore}
+                disabled={loading}
+              >
+                Explore Platform (Limited Access)
+              </Button>
             </div>
 
             <div className="flex items-center justify-center gap-6 text-xs text-muted-foreground pt-2">

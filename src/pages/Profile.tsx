@@ -28,6 +28,10 @@ import {
   Globe,
   ExternalLink,
 } from 'lucide-react';
+import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
+import { usePaymentGuard } from '@/hooks/usePaymentGuard';
+import PaymentRequiredDialog from '@/components/PaymentRequiredDialog';
+import { usePaymentGuard } from '@/hooks/usePaymentGuard';
 
 interface ProfileData {
   id: string;
@@ -83,8 +87,11 @@ const Profile = () => {
     bio: '',
     skills: [] as string[],
   });
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [blockedFeature, setBlockedFeature] = useState('');
   const navigate = useNavigate();
   const { toast } = useToast();
+  const { hasPaid, restrictedFeatures } = usePaymentGuard();
 
   useEffect(() => {
     loadCurrentUser();
@@ -348,6 +355,13 @@ const Profile = () => {
   const handleConnect = async () => {
     if (!currentUserId || !userId) return;
 
+    // Check payment status
+    if (!hasPaid) {
+      setBlockedFeature(restrictedFeatures.send_request);
+      setShowPaymentDialog(true);
+      return;
+    }
+
     try {
       const { error } = await supabase
         .from('connections')
@@ -375,6 +389,13 @@ const Profile = () => {
 
   const handleMessage = async () => {
     if (!currentUserId || !userId) return;
+
+    // Check payment status
+    if (!hasPaid) {
+      setBlockedFeature(restrictedFeatures.send_message);
+      setShowPaymentDialog(true);
+      return;
+    }
 
     try {
       // Check if conversation exists
@@ -792,6 +813,12 @@ const Profile = () => {
           </div>
         </DialogContent>
       </Dialog>
+
+      <PaymentRequiredDialog
+        open={showPaymentDialog}
+        onOpenChange={setShowPaymentDialog}
+        featureName={blockedFeature}
+      />
     </div>
   );
 };
